@@ -57,29 +57,14 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm build
 
-      - name: Debug OIDC and npm config
+      - name: Configure npm for OIDC
         run: |
-          echo "=== .npmrc ==="
-          cat ~/.npmrc || echo "no ~/.npmrc"
-          cat .npmrc || echo "no ./.npmrc"
-          echo ""
-          echo "=== npm whoami ==="
-          npm whoami 2>&1 || echo "npm whoami failed (expected with OIDC)"
-          echo ""
-          echo "=== npm config ==="
-          npm config list
-          echo ""
-          echo "=== Package info ==="
-          node -p "require('./package.json').name + '@' + require('./package.json').version"
-          echo ""
-          echo "=== npm access ==="
-          npm access list packages @pompidup 2>&1 || echo "npm access failed"
+          echo "registry=https://registry.npmjs.org/" > ~/.npmrc
 
       - name: Publish to npm
         run: |
@@ -89,7 +74,7 @@ jobs:
 
           if [ "$LOCAL_VERSION" != "$PUBLISHED_VERSION" ]; then
             echo "Publishing $PACKAGE_NAME@$LOCAL_VERSION (npm has $PUBLISHED_VERSION)"
-            npm publish --provenance --access public 2>&1
+            npm publish --provenance --access public
           else
             echo "Version $LOCAL_VERSION already published, skipping"
           fi
