@@ -7,12 +7,45 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
+  version:
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
       pull-requests: write
+
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: echo "noop"
+          title: "chore: version package"
+          commit: "chore: version package"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: version
+    if: needs.version.outputs.hasChangesets == 'false'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
       id-token: write
 
     steps:
@@ -30,20 +63,8 @@ jobs:
 
       - run: pnpm build
 
-      - name: Check for changesets
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: echo "skip"
-          title: "chore: version package"
-          commit: "chore: version package"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to npm with provenance
-        if: steps.changesets.outputs.hasChangesets == 'false'
+      - name: Publish to npm
         run: |
-          # Check if current version is already published
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           LOCAL_VERSION=$(node -p "require('./package.json').version")
           PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || echo "0.0.0")
