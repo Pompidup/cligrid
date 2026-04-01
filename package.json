@@ -39,6 +39,7 @@
     "demo:advanced": "tsx demo/advanced.ts",
     "demo:castle": "tsx demo/castle.ts"
   },
+  "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=18"
   },
