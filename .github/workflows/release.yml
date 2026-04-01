@@ -63,6 +63,24 @@ jobs:
 
       - run: pnpm build
 
+      - name: Debug OIDC and npm config
+        run: |
+          echo "=== .npmrc ==="
+          cat ~/.npmrc || echo "no ~/.npmrc"
+          cat .npmrc || echo "no ./.npmrc"
+          echo ""
+          echo "=== npm whoami ==="
+          npm whoami 2>&1 || echo "npm whoami failed (expected with OIDC)"
+          echo ""
+          echo "=== npm config ==="
+          npm config list
+          echo ""
+          echo "=== Package info ==="
+          node -p "require('./package.json').name + '@' + require('./package.json').version"
+          echo ""
+          echo "=== npm access ==="
+          npm access list packages @pompidup 2>&1 || echo "npm access failed"
+
       - name: Publish to npm
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -71,7 +89,7 @@ jobs:
 
           if [ "$LOCAL_VERSION" != "$PUBLISHED_VERSION" ]; then
             echo "Publishing $PACKAGE_NAME@$LOCAL_VERSION (npm has $PUBLISHED_VERSION)"
-            npm publish --provenance --access public
+            npm publish --provenance --access public 2>&1
           else
             echo "Version $LOCAL_VERSION already published, skipping"
           fi
