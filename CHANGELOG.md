@@ -1,5 +1,11 @@
 # @pompidup/cligrid
 
+## 1.0.1
+
+### Patch Changes
+
+- d010a3f: Extract cligrid to dedicated repository, update repository and homepage URLs, add CI/CD with GitHub Actions and OIDC trusted publisher for npm releases.
+
 ## 1.0.0
 
 ### Major Changes
