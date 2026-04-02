@@ -34,6 +34,7 @@ class Renderer {
       this.terminalHeight = rows;
       this.frontBuffer.resize(columns, rows);
       this.backBuffer.resize(columns, rows);
+      this.fullClear();
       this.render();
     };
     process.stdout.on("resize", this.resizeHandler);
