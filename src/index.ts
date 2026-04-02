@@ -12,3 +12,4 @@ export * from "./entities/createComponent.js";
 export type { TerminalDimensions } from "./port/terminalDimensions.js";
 export * from "./components/index.js";
 export { parseHex, hexToRgb, rgbToHex, lighten, darken, mix, gradient } from "./utils/color.js";
+export { stringWidth, graphemeSplit, graphemeSliceByWidth } from "./utils/stringWidth.js";

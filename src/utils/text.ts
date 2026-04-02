@@ -1,5 +1,6 @@
 import type { OverflowMode } from "../entities/style.js";
 import type { StyledSegment, TextAlign } from "../entities/component.js";
+import { stringWidth, graphemeSplit, graphemeSliceByWidth } from "./stringWidth.js";
 
 // --- Existing string-based overflow (kept for backward compat) ---
 
@@ -13,14 +14,14 @@ function applyOverflow(
   switch (mode) {
     case "hidden":
       return lines.map((line) =>
-        line.length > width ? line.slice(0, width) : line
+        stringWidth(line) > width ? graphemeSliceByWidth(line, width) : line
       );
 
     case "ellipsis":
       return lines.map((line) => {
-        if (line.length <= width) return line;
-        if (width <= 3) return line.slice(0, width);
-        return line.slice(0, width - 3) + "...";
+        if (stringWidth(line) <= width) return line;
+        if (width <= 3) return graphemeSliceByWidth(line, width);
+        return graphemeSliceByWidth(line, width - 3) + "...";
       });
 
     case "wrap":
@@ -34,17 +35,24 @@ function applyOverflow(
 function wrapCharacter(lines: string[], width: number): string[] {
   const result: string[] = [];
   for (const line of lines) {
-    if (line.length <= width) {
+    if (stringWidth(line) <= width) {
       result.push(line);
     } else {
-      let remaining = line;
-      while (remaining.length > width) {
-        result.push(remaining.slice(0, width));
-        remaining = remaining.slice(width);
+      const graphemes = graphemeSplit(line);
+      let current = "";
+      let currentWidth = 0;
+      for (const g of graphemes) {
+        const gw = stringWidth(g);
+        if (currentWidth + gw > width) {
+          if (current.length > 0) result.push(current);
+          current = g;
+          currentWidth = gw;
+        } else {
+          current += g;
+          currentWidth += gw;
+        }
       }
-      if (remaining.length > 0) {
-        result.push(remaining);
-      }
+      if (current.length > 0) result.push(current);
     }
   }
   return result;
@@ -53,41 +61,65 @@ function wrapCharacter(lines: string[], width: number): string[] {
 function wrapWord(lines: string[], width: number): string[] {
   const result: string[] = [];
   for (const line of lines) {
-    if (line.length <= width) {
+    if (stringWidth(line) <= width) {
       result.push(line);
       continue;
     }
 
     const words = line.split(" ");
     let current = "";
+    let currentWidth = 0;
 
     for (const word of words) {
-      if (current.length === 0) {
-        // First word on a new line
-        if (word.length > width) {
-          // Word itself is longer than width, break it by char
-          let remaining = word;
-          while (remaining.length > width) {
-            result.push(remaining.slice(0, width));
-            remaining = remaining.slice(width);
+      const wordWidth = stringWidth(word);
+      if (currentWidth === 0) {
+        if (wordWidth > width) {
+          // Word itself is longer than width, break it by grapheme
+          const graphemes = graphemeSplit(word);
+          let part = "";
+          let partWidth = 0;
+          for (const g of graphemes) {
+            const gw = stringWidth(g);
+            if (partWidth + gw > width) {
+              if (part.length > 0) result.push(part);
+              part = g;
+              partWidth = gw;
+            } else {
+              part += g;
+              partWidth += gw;
+            }
           }
-          current = remaining;
+          current = part;
+          currentWidth = partWidth;
         } else {
           current = word;
+          currentWidth = wordWidth;
         }
-      } else if (current.length + 1 + word.length <= width) {
+      } else if (currentWidth + 1 + wordWidth <= width) {
         current += " " + word;
+        currentWidth += 1 + wordWidth;
       } else {
         result.push(current);
-        if (word.length > width) {
-          let remaining = word;
-          while (remaining.length > width) {
-            result.push(remaining.slice(0, width));
-            remaining = remaining.slice(width);
+        if (wordWidth > width) {
+          const graphemes = graphemeSplit(word);
+          let part = "";
+          let partWidth = 0;
+          for (const g of graphemes) {
+            const gw = stringWidth(g);
+            if (partWidth + gw > width) {
+              if (part.length > 0) result.push(part);
+              part = g;
+              partWidth = gw;
+            } else {
+              part += g;
+              partWidth += gw;
+            }
           }
-          current = remaining;
+          current = part;
+          currentWidth = partWidth;
         } else {
           current = word;
+          currentWidth = wordWidth;
         }
       }
     }
@@ -108,7 +140,7 @@ type SegmentLine = {
 
 function segmentsWidth(segments: StyledSegment[]): number {
   let w = 0;
-  for (const s of segments) w += s.text.length;
+  for (const s of segments) w += stringWidth(s.text);
   return w;
 }
 
@@ -117,11 +149,12 @@ function truncateSegments(segments: StyledSegment[], width: number): StyledSegme
   let remaining = width;
   for (const seg of segments) {
     if (remaining <= 0) break;
-    if (seg.text.length <= remaining) {
+    const segW = stringWidth(seg.text);
+    if (segW <= remaining) {
       result.push(seg);
-      remaining -= seg.text.length;
+      remaining -= segW;
     } else {
-      result.push({ text: seg.text.slice(0, remaining), style: seg.style });
+      result.push({ text: graphemeSliceByWidth(seg.text, remaining), style: seg.style });
       remaining = 0;
     }
   }
@@ -139,13 +172,14 @@ function truncateSegmentsEllipsis(segments: StyledSegment[], width: number): Sty
   return truncated;
 }
 
-type StyledChar = { char: string; style?: Partial<import("../entities/style.js").Style> };
+type StyledChar = { char: string; width: number; style?: Partial<import("../entities/style.js").Style> };
 
 function segmentsToChars(segments: StyledSegment[]): StyledChar[] {
   const chars: StyledChar[] = [];
   for (const seg of segments) {
-    for (const ch of seg.text) {
-      chars.push({ char: ch, style: seg.style });
+    const graphemes = graphemeSplit(seg.text);
+    for (const g of graphemes) {
+      chars.push({ char: g, width: stringWidth(g), style: seg.style });
     }
   }
   return chars;
@@ -179,6 +213,12 @@ function sameStyle(
   return a.fg === b.fg && a.bg === b.bg && a.bold === b.bold && a.dim === b.dim && a.underline === b.underline && a.italic === b.italic && a.strikethrough === b.strikethrough && a.inverse === b.inverse;
 }
 
+function charsWidth(chars: StyledChar[]): number {
+  let w = 0;
+  for (const c of chars) w += c.width;
+  return w;
+}
+
 function wrapSegmentsCharacter(lines: SegmentLine[], width: number): SegmentLine[] {
   const result: SegmentLine[] = [];
 
@@ -191,12 +231,24 @@ function wrapSegmentsCharacter(lines: SegmentLine[], width: number): SegmentLine
 
     let start = 0;
     while (start < chars.length) {
-      const end = Math.min(start + width, chars.length);
+      const lineChars: StyledChar[] = [];
+      let lineW = 0;
+      let i = start;
+      while (i < chars.length && lineW + chars[i]!.width <= width) {
+        lineChars.push(chars[i]!);
+        lineW += chars[i]!.width;
+        i++;
+      }
+      if (lineChars.length === 0 && i < chars.length) {
+        // Single char wider than width — include it anyway to avoid infinite loop
+        lineChars.push(chars[i]!);
+        i++;
+      }
       result.push({
-        segments: charsToSegments(chars.slice(start, end)),
+        segments: charsToSegments(lineChars),
         align: line.align,
       });
-      start = end;
+      start = i;
     }
   }
 
@@ -237,28 +289,32 @@ function wrapSegmentsWord(lines: SegmentLine[], width: number): SegmentLine[] {
 
     for (const token of tokens) {
       if (token.isSpace) {
-        if (lineWidth > 0 && lineWidth + token.chars.length <= width) {
+        const tokenW = charsWidth(token.chars);
+        if (lineWidth > 0 && lineWidth + tokenW <= width) {
           currentLine.push(...token.chars);
-          lineWidth += token.chars.length;
+          lineWidth += tokenW;
         }
         continue;
       }
 
       // Word token
-      if (token.chars.length > width) {
+      const tokenW = charsWidth(token.chars);
+      if (tokenW > width) {
         // Word longer than width — break by character
         for (const ch of token.chars) {
-          if (lineWidth >= width) {
-            result.push({ segments: charsToSegments(currentLine), align: line.align });
+          if (lineWidth + ch.width > width) {
+            if (currentLine.length > 0) {
+              result.push({ segments: charsToSegments(currentLine), align: line.align });
+            }
             currentLine = [];
             lineWidth = 0;
           }
           currentLine.push(ch);
-          lineWidth++;
+          lineWidth += ch.width;
         }
-      } else if (lineWidth + token.chars.length <= width) {
+      } else if (lineWidth + tokenW <= width) {
         currentLine.push(...token.chars);
-        lineWidth += token.chars.length;
+        lineWidth += tokenW;
       } else {
         // Word doesn't fit on current line
         if (currentLine.length > 0) {
@@ -269,7 +325,7 @@ function wrapSegmentsWord(lines: SegmentLine[], width: number): SegmentLine[] {
           result.push({ segments: charsToSegments(currentLine), align: line.align });
         }
         currentLine = [...token.chars];
-        lineWidth = token.chars.length;
+        lineWidth = tokenW;
       }
     }
 

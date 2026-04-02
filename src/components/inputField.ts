@@ -1,5 +1,6 @@
 import { Component } from "../entities/component.js";
 import type { RenderOutput, RenderContext, ComponentConfig } from "../entities/component.js";
+import { stringWidth, graphemeSliceByWidth } from "../utils/stringWidth.js";
 
 type InputFieldProps = {
   value: string;
@@ -91,7 +92,7 @@ class InputField extends Component<InputFieldProps> {
 
     return [
       {
-        text: display.length > width ? display.slice(0, width) : display,
+        text: stringWidth(display) > width ? graphemeSliceByWidth(display, width) : display,
       },
     ];
   }

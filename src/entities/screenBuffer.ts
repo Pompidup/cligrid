@@ -1,3 +1,5 @@
+import { stringWidth, graphemeSplit } from "../utils/stringWidth.js";
+
 type Cell = {
   char: string;
   fg?: string;
@@ -47,13 +49,16 @@ class ScreenBuffer {
   write(x: number, y: number, content: string, style?: Omit<Cell, "char">): void {
     if (y < 0 || y >= this._height) return;
 
-    for (let i = 0; i < content.length; i++) {
-      const col = x + i;
-      if (col < 0) continue;
-      if (col >= this._width) break;
+    const graphemes = graphemeSplit(content);
+    let col = x;
+    for (const grapheme of graphemes) {
+      const w = stringWidth(grapheme);
+      if (w === 0) continue;
+      if (col + w > this._width) break;
+      if (col < 0) { col += w; continue; }
 
       this._cells[y]![col] = {
-        char: content[i]!,
+        char: grapheme,
         fg: style?.fg,
         bg: style?.bg,
         bold: style?.bold,
@@ -63,6 +68,13 @@ class ScreenBuffer {
         strikethrough: style?.strikethrough,
         inverse: style?.inverse,
       };
+      // Shadow cells for wide characters
+      for (let j = 1; j < w; j++) {
+        if (col + j < this._width) {
+          this._cells[y]![col + j] = { char: "", fg: style?.fg, bg: style?.bg };
+        }
+      }
+      col += w;
     }
   }
 

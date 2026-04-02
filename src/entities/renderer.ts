@@ -5,6 +5,7 @@ import { ScreenBuffer } from "./screenBuffer.js";
 import { BORDER_CHARS, getBoxInsets } from "./style.js";
 import { stylize } from "../utils/ansi.js";
 import { applySegmentOverflow, segmentsWidth } from "../utils/text.js";
+import { stringWidth } from "../utils/stringWidth.js";
 import type { SegmentLine } from "../utils/text.js";
 import { getTerminalDimensions } from "./../../config/terminalDimensionsFactory.js";
 
@@ -103,10 +104,12 @@ class Renderer {
     let lastY = -1;
 
     for (const change of changes) {
+      const { cell } = change;
+      // Skip shadow cells (placeholders for wide characters)
+      if (cell.char === "") continue;
       if (change.y !== lastY || change.x !== lastX + 1) {
         output += `\x1b[${change.y + 1};${change.x + 1}H`;
       }
-      const { cell } = change;
       const hasStyle = cell.fg || cell.bg || cell.bold || cell.dim || cell.underline || cell.italic || cell.strikethrough || cell.inverse;
       output += hasStyle ? stylize(cell.char, cell) : cell.char;
       lastX = change.x;
@@ -253,7 +256,7 @@ class Renderer {
       for (const seg of segments) {
         const segStyle = seg.style ? { ...baseStyle, ...seg.style } : baseStyle;
         this.backBuffer.write(cursorX, lineY, seg.text, segStyle);
-        cursorX += seg.text.length;
+        cursorX += stringWidth(seg.text);
       }
     }
 

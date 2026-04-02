@@ -55,5 +55,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "string-width": "^8.2.0"
   }
 }

@@ -1,5 +1,6 @@
 import { Component } from "../entities/component.js";
 import type { RenderOutput, RenderContext, ComponentConfig } from "../entities/component.js";
+import { stringWidth } from "../utils/stringWidth.js";
 
 type ProgressBarProps = {
   value: number; // 0 to 1
@@ -19,7 +20,7 @@ class ProgressBar extends Component<ProgressBarProps> {
     const percent = `${Math.round(clamped * 100)}%`;
     const labelStr = label ? `${label} ` : "";
     const suffixStr = ` ${percent}`;
-    const barWidth = Math.max(0, width - labelStr.length - suffixStr.length - 2);
+    const barWidth = Math.max(0, width - stringWidth(labelStr) - stringWidth(suffixStr) - 2);
 
     const filled = Math.round(clamped * barWidth);
     const empty = barWidth - filled;
