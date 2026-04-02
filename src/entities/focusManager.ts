@@ -76,6 +76,14 @@ class FocusManager extends EventEmitter {
           current.scrollBy(1);
           return;
         }
+        if (event.key === "left") {
+          current.scrollByX(-1);
+          return;
+        }
+        if (event.key === "right") {
+          current.scrollByX(1);
+          return;
+        }
       }
 
       // Dispatch to focused component, then bubble up to parents
