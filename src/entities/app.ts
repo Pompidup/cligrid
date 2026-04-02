@@ -1,10 +1,13 @@
 import type { Component } from "./component.js";
 import type { KeyEvent } from "./inputManager.js";
 import type { TerminalDimensions } from "../port/terminalDimensions.js";
+import type { EasingFn } from "../utils/easing.js";
+import type { AnimationId } from "./animator.js";
 import { Template } from "./template.js";
 import { Renderer } from "./renderer.js";
 import { InputManager } from "./inputManager.js";
 import { FocusManager } from "./focusManager.js";
+import { Animator } from "./animator.js";
 import { getTerminalDimensions } from "../../config/terminalDimensionsFactory.js";
 
 type AppOptions = {
@@ -17,6 +20,7 @@ class App {
   private renderer: Renderer;
   private inputManager: InputManager;
   private focusManager: FocusManager;
+  private animator: Animator;
   private keyHandlers: Map<string, (() => void)[]> = new Map();
   private running = false;
   private useAlternateScreen: boolean;
@@ -34,6 +38,13 @@ class App {
     this.renderer = new Renderer(this.template, dims);
     this.inputManager = new InputManager();
     this.focusManager = new FocusManager();
+    this.animator = new Animator();
+
+    this.animator.onFrame(() => {
+      if (this.running) {
+        this.renderer.render();
+      }
+    });
 
     this.inputManager.on("keypress", (event: KeyEvent) => {
       // Check global key handlers first
@@ -100,6 +111,7 @@ class App {
     if (!this.running) return;
     this.running = false;
 
+    this.animator.destroy();
     this.inputManager.destroy();
     this.renderer.destroy();
     this.focusManager.destroy();
@@ -210,6 +222,38 @@ class App {
   disconnect(componentId: string): this {
     this.connectedComponents.delete(componentId);
     return this;
+  }
+
+  animate(
+    component: Component,
+    propsTarget: Record<string, number>,
+    options: { duration: number; easing?: EasingFn; onComplete?: () => void }
+  ): AnimationId[] {
+    const ids: AnimationId[] = [];
+    const keys = Object.keys(propsTarget);
+
+    for (const key of keys) {
+      const from = (component.props as Record<string, any>)[key] as number;
+      const to = propsTarget[key]!;
+
+      const id = this.animator.animate({
+        from,
+        to,
+        duration: options.duration,
+        easing: options.easing,
+        onUpdate: (value) => {
+          component.setProps({ [key]: value } as any);
+        },
+        onComplete: key === keys[keys.length - 1] ? options.onComplete : undefined,
+      });
+      ids.push(id);
+    }
+
+    return ids;
+  }
+
+  tick(callback: (dt: number) => void): () => void {
+    return this.animator.onTick(callback);
   }
 
   private keyCombo(event: KeyEvent): string {

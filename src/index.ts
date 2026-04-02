@@ -13,3 +13,7 @@ export type { TerminalDimensions } from "./port/terminalDimensions.js";
 export * from "./components/index.js";
 export { parseHex, hexToRgb, rgbToHex, lighten, darken, mix, gradient } from "./utils/color.js";
 export { stringWidth, graphemeSplit, graphemeSliceByWidth } from "./utils/stringWidth.js";
+export { Animator } from "./entities/animator.js";
+export type { AnimationId, AnimationConfig } from "./entities/animator.js";
+export { linear, easeIn, easeOut, easeInOut, bounce, elastic } from "./utils/easing.js";
+export type { EasingFn } from "./utils/easing.js";
