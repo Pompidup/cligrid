@@ -69,6 +69,7 @@ type ComponentConfig<P extends Props = {}> = {
   style?: Style;
   children?: Component[];
   layout?: LayoutDirection;
+  gap?: number;
   flex?: number;
   scrollable?: boolean;
   zIndex?: number;
@@ -115,6 +116,7 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   margin: number;
   style?: Style;
   layout: LayoutDirection;
+  gap: number;
   flex?: number;
   scrollable: boolean;
   zIndex: number;
@@ -161,6 +163,7 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.margin = config.margin ?? 1;
       this.style = config.style;
       this.layout = config.layout ?? "none";
+      this.gap = config.gap ?? 0;
       this.flex = config.flex;
       this.scrollable = config.scrollable ?? false;
       this.zIndex = config.zIndex ?? 0;
@@ -184,6 +187,7 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.margin = margin ?? 1;
       this.style = style;
       this.layout = "none";
+      this.gap = 0;
       this.scrollable = false;
       this.zIndex = 0;
     }

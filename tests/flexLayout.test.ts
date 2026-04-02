@@ -148,6 +148,91 @@ describe("Flex layout - row direction", () => {
     expect(child3.absolutePosition!.x).toBe(30);
   });
 
+  it("should apply gap between children in row layout", () => {
+    const child1 = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 10,
+      height: 5,
+      margin: 0,
+    });
+
+    const child2 = new MockComponent({
+      id: "c2",
+      position: { x: 0, y: 0 },
+      width: 10,
+      height: 5,
+      margin: 0,
+    });
+
+    const child3 = new MockComponent({
+      id: "c3",
+      position: { x: 0, y: 0 },
+      width: 10,
+      height: 5,
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      gap: 2,
+      children: [child1, child2, child3],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // c1 at 0, c2 at 10+2=12, c3 at 22+2=24
+    expect(child1.absolutePosition!.x).toBe(0);
+    expect(child2.absolutePosition!.x).toBe(12);
+    expect(child3.absolutePosition!.x).toBe(24);
+  });
+
+  it("should reduce flex space by total gap in row layout", () => {
+    const child1 = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 5,
+      margin: 0,
+      flex: 1,
+    });
+
+    const child2 = new MockComponent({
+      id: "c2",
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 5,
+      margin: 0,
+      flex: 1,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      gap: 4,
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Total space=40, gap=4 (1 gap), remaining=36, each flex=18
+    expect(child1.absolutePosition!.width).toBe(18);
+    expect(child2.absolutePosition!.width).toBe(18);
+    expect(child1.absolutePosition!.x).toBe(0);
+    expect(child2.absolutePosition!.x).toBe(22); // 18 + 4
+  });
+
   it("should mix fixed and flex children in row layout", () => {
     const fixed = new MockComponent({
       id: "fixed",
@@ -269,6 +354,41 @@ describe("Flex layout - column direction", () => {
 
     expect(child1.absolutePosition!.y).toBe(0);
     expect(child2.absolutePosition!.y).toBe(5);
+  });
+
+  it("should apply gap between children in column layout", () => {
+    const child1 = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 20,
+      height: 5,
+      margin: 0,
+    });
+
+    const child2 = new MockComponent({
+      id: "c2",
+      position: { x: 0, y: 0 },
+      width: 20,
+      height: 5,
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 20,
+      margin: 0,
+      layout: "column",
+      gap: 3,
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child1.absolutePosition!.y).toBe(0);
+    expect(child2.absolutePosition!.y).toBe(8); // 5 + 3
   });
 
   it("should account for margin in column layout", () => {

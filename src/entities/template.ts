@@ -257,6 +257,7 @@ class Template extends EventEmitter {
   ): void {
     const isRow = parent.layout === "row";
     const totalSpace = isRow ? contentWidth : contentHeight;
+    const gap = parent.gap;
 
     // First pass: compute fixed sizes and total flex
     let fixedSpace = 0;
@@ -292,6 +293,10 @@ class Template extends EventEmitter {
       }
     }
 
+    // Account for gap between children
+    const totalGap = gap * Math.max(0, parent.children.length - 1);
+    fixedSpace += totalGap;
+
     const remainingSpace = Math.max(0, totalSpace - fixedSpace);
 
     // Second pass: assign positions
@@ -323,6 +328,11 @@ class Template extends EventEmitter {
         childX = contentX + margin;
         childY = contentY + cursor + margin;
         cursor += childHeight + margin * 2;
+      }
+
+      // Add gap after each child except the last
+      if (i < parent.children.length - 1) {
+        cursor += gap;
       }
 
       // Clip to parent content area
