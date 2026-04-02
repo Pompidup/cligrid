@@ -201,32 +201,37 @@ class Renderer {
 
     const insets = getBoxInsets(style);
 
-    // Draw border if configured
-    if (style?.border && style.border.style !== "none") {
-      const chars = BORDER_CHARS[style.border.style];
-      const borderFg = this.resolveColor(style.border.fg);
-      const borderStyle = borderFg ? { fg: borderFg } : undefined;
-
-      // Top border
-      this.backBuffer.write(x, y, chars.topLeft + chars.horizontal.repeat(Math.max(0, width - 2)) + chars.topRight, borderStyle);
-      // Bottom border
-      this.backBuffer.write(x, y + height - 1, chars.bottomLeft + chars.horizontal.repeat(Math.max(0, width - 2)) + chars.bottomRight, borderStyle);
-      // Side borders
-      for (let row = 1; row < height - 1; row++) {
-        this.backBuffer.write(x, y + row, chars.vertical, borderStyle);
-        this.backBuffer.write(x + width - 1, y + row, chars.vertical, borderStyle);
-      }
-    }
-
     // Resolve theme colors for background
     const resolvedBg = this.resolveColor(style?.bg);
 
     // Draw background fill if configured
+    // Fill the ENTIRE component area (important for overlays to cover content below)
+    // Then draw border on top so border chars are visible over the bg
     if (resolvedBg) {
-      for (let row = insets.top; row < height - insets.bottom; row++) {
-        for (let col = insets.left; col < width - insets.right; col++) {
+      for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
           this.backBuffer.write(x + col, y + row, " ", { bg: resolvedBg });
         }
+      }
+    }
+
+    // Draw border if configured (after bg so border chars render on top)
+    if (style?.border && style.border.style !== "none") {
+      const chars = BORDER_CHARS[style.border.style];
+      const borderFg = this.resolveColor(style.border.fg);
+      const borderStyle: Record<string, any> = {};
+      if (borderFg) borderStyle.fg = borderFg;
+      if (resolvedBg) borderStyle.bg = resolvedBg;
+      const bStyle = Object.keys(borderStyle).length > 0 ? borderStyle : undefined;
+
+      // Top border
+      this.backBuffer.write(x, y, chars.topLeft + chars.horizontal.repeat(Math.max(0, width - 2)) + chars.topRight, bStyle);
+      // Bottom border
+      this.backBuffer.write(x, y + height - 1, chars.bottomLeft + chars.horizontal.repeat(Math.max(0, width - 2)) + chars.bottomRight, bStyle);
+      // Side borders
+      for (let row = 1; row < height - 1; row++) {
+        this.backBuffer.write(x, y + row, chars.vertical, bStyle);
+        this.backBuffer.write(x + width - 1, y + row, chars.vertical, bStyle);
       }
     }
 
@@ -269,17 +274,33 @@ class Renderer {
       align: rl.align,
     }));
 
-    // Apply segment-aware overflow
-    const processedLines = applySegmentOverflow(segmentLines, contentWidth, overflowMode);
+    // For scrollable components, compute full line widths BEFORE overflow truncation
+    // so horizontal scroll has real content to scroll through
+    let maxLineWidth = 0;
+    if (component.scrollable) {
+      for (const line of segmentLines) {
+        const w = segmentsWidth(line.segments);
+        if (w > maxLineWidth) maxLineWidth = w;
+      }
+    }
+
+    // Apply segment-aware overflow (wrap modes for vertical, hidden/ellipsis for horizontal)
+    // For scrollable components, only apply vertical overflow (wrap), not horizontal truncation
+    const effectiveOverflow = component.scrollable && (overflowMode === "hidden" || overflowMode === "ellipsis")
+      ? "hidden" as const
+      : overflowMode;
+    const processedLines = component.scrollable
+      ? segmentLines // skip overflow for scrollable — we handle clipping during write
+      : applySegmentOverflow(segmentLines, contentWidth, overflowMode);
 
     // Track total lines for scrollable components
     component.setTotalLines(processedLines.length);
 
-    // Compute max line width for horizontal scroll tracking
-    let maxLineWidth = 0;
-    for (const line of processedLines) {
-      const w = segmentsWidth(line.segments);
-      if (w > maxLineWidth) maxLineWidth = w;
+    if (!component.scrollable) {
+      for (const line of processedLines) {
+        const w = segmentsWidth(line.segments);
+        if (w > maxLineWidth) maxLineWidth = w;
+      }
     }
     component.setTotalColumns(maxLineWidth);
 
@@ -305,8 +326,11 @@ class Renderer {
 
       // Write each segment individually with merged styles, applying horizontal scroll
       let cursorX = x + insets.left + alignOffset;
+      const maxX = x + insets.left + contentWidth; // right edge clipping boundary
       let consumedWidth = 0;
       for (const seg of segments) {
+        if (cursorX >= maxX) break; // past visible area
+
         // Resolve theme colors in segment styles
         const resolvedSegStyle = seg.style ? {
           ...seg.style,
@@ -316,16 +340,38 @@ class Renderer {
         const segStyle = resolvedSegStyle ? { ...baseStyle, ...resolvedSegStyle } : baseStyle;
         const segW = stringWidth(seg.text);
 
-        if (scrollXOffset > 0 && consumedWidth + segW > scrollXOffset) {
-          // Partially visible segment
-          const skipChars = Math.max(0, scrollXOffset - consumedWidth);
-          const visibleText = seg.text.slice(skipChars);
-          this.backBuffer.write(cursorX, lineY, visibleText, segStyle);
-          cursorX += stringWidth(visibleText);
-        } else if (consumedWidth >= scrollXOffset) {
-          // Fully visible segment
-          this.backBuffer.write(cursorX, lineY, seg.text, segStyle);
-          cursorX += segW;
+        if (consumedWidth + segW <= scrollXOffset) {
+          // Entirely before visible area — skip
+          consumedWidth += segW;
+          continue;
+        }
+
+        let textToWrite = seg.text;
+        if (consumedWidth < scrollXOffset) {
+          // Partially before visible area — trim start
+          const skipChars = scrollXOffset - consumedWidth;
+          textToWrite = textToWrite.slice(skipChars);
+        }
+
+        // Clip to right edge
+        const writeW = stringWidth(textToWrite);
+        const remainingSpace = maxX - cursorX;
+        if (writeW > remainingSpace) {
+          // Trim to fit
+          let trimmed = "";
+          let trimmedW = 0;
+          for (const ch of textToWrite) {
+            const chW = stringWidth(ch);
+            if (trimmedW + chW > remainingSpace) break;
+            trimmed += ch;
+            trimmedW += chW;
+          }
+          textToWrite = trimmed;
+        }
+
+        if (textToWrite.length > 0) {
+          this.backBuffer.write(cursorX, lineY, textToWrite, segStyle);
+          cursorX += stringWidth(textToWrite);
         }
         consumedWidth += segW;
       }

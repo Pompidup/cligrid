@@ -116,16 +116,16 @@ describe("Style & Box Model", () => {
     expect(cell?.fg).toBe("red");
   });
 
-  it("should apply bg style to inner area", () => {
+  it("should apply bg style to entire area including border", () => {
     const { buf } = setup({ bg: "blue", border: { style: "single" } });
 
     // Inner cell should have bg
     const innerCell = buf.getCell(5, 2);
     expect(innerCell?.bg).toBe("blue");
 
-    // Border cell should NOT have bg
+    // Border cell should also have bg (for consistent background, important for overlays)
     const borderCell = buf.getCell(0, 0);
-    expect(borderCell?.bg).toBeUndefined();
+    expect(borderCell?.bg).toBe("blue");
   });
 
   it("should apply border fg color", () => {

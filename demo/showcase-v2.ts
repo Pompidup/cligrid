@@ -1,26 +1,22 @@
 /**
  * Demo: v2 Showcase
  *
- * Showcases all v2 features in a single interactive dashboard.
- * Each feature is clearly demonstrated with visual feedback.
- *
  * Run: pnpm demo:showcase
  * Recommended terminal size: 100x30 minimum
  *
  * Features demonstrated:
- * - Table with data and vertical scroll
- * - Tabs for navigation between views
- * - Spinner with multiple styles
- * - Modal confirmation dialog (overlay)
- * - Checkbox toggles
- * - Animation system (progress bar, counters)
- * - Color gradients
- * - Theme system (dark/light switch)
- * - Emoji / Unicode support
- * - Mouse support (click, scroll)
- * - Hover detection (visual feedback)
- * - Focus visible (focusStyle highlights)
- * - Horizontal scroll (wide content)
+ * - Table with data and vertical scroll (↑↓ when focused)
+ * - Tabs for navigation (←→ when focused)
+ * - Logs tab with horizontal scroll (←→ when table focused)
+ * - Spinner with auto-cycling styles
+ * - Modal overlay (m key) — centered, opaque bg, focus on buttons
+ * - Checkbox toggles (Space/Enter when focused)
+ * - Theme toggle (t key or checkbox) — dark/light with design tokens
+ * - Animation system — live CPU/MEM bars with easing
+ * - Color gradients in header
+ * - Mouse support — hover tracking, click counter
+ * - Focus visible — gold highlight on Tab navigation
+ * - Unicode/Emoji throughout
  */
 
 import {
@@ -35,7 +31,6 @@ import {
   darkTheme,
   lightTheme,
   gradient,
-  easeOut,
   easeInOut,
 } from "../src/index.js";
 import type { RenderContext } from "../src/index.js";
@@ -54,8 +49,7 @@ const header = createComponent({
   height: 3,
   margin: 0,
   style: {
-    border: { style: "rounded", fg: "#5B9BD5" },
-    padding: { left: 0 },
+    border: { style: "rounded", fg: "primary" },
   },
   props: {},
   render: () => ({
@@ -81,18 +75,16 @@ const tabs = new Tabs({
     tabs: [
       { label: "📊 Services", id: "services" },
       { label: "📈 Metrics", id: "metrics" },
-      { label: "📜 Logs (scroll →)", id: "logs" },
+      { label: "📜 Logs (→ scroll)", id: "logs" },
     ],
     activeTab: "services",
   },
-  style: { fg: "white" },
-  focusStyle: { fg: "#FFD700", bold: true },
-  onTabChange: (id) => {
-    switchTab(id);
-  },
+  style: { fg: "text" },
+  focusStyle: { fg: "warning", bold: true },
+  onTabChange: (id) => switchTab(id),
 });
 
-// ── Table: Services ──────────────────────────────────────────────────
+// ── Table data ───────────────────────────────────────────────────────
 const serviceColumns = [
   { key: "name", label: "Service", width: 18 },
   { key: "status", label: "Status", width: 14 },
@@ -100,7 +92,6 @@ const serviceColumns = [
   { key: "cpu", label: "CPU", width: 8, align: "right" as const },
   { key: "mem", label: "Memory", width: 10, align: "right" as const },
 ];
-
 const serviceRows = [
   { name: "🌐 api-gateway", status: "✅ Running", region: "us-east-1", cpu: "24%", mem: "512MB" },
   { name: "🔐 auth-svc", status: "✅ Running", region: "eu-west-1", cpu: "18%", mem: "256MB" },
@@ -121,7 +112,6 @@ const metricsColumns = [
   { key: "peak", label: "Peak", width: 12, align: "right" as const },
   { key: "trend", label: "Trend", width: 8 },
 ];
-
 const metricsRows = [
   { metric: "Requests/sec", current: "1,247", avg24h: "982", peak: "3,891", trend: "📈" },
   { metric: "Avg latency", current: "23ms", avg24h: "31ms", peak: "142ms", trend: "📉" },
@@ -133,23 +123,22 @@ const metricsRows = [
   { metric: "Queue depth", current: "23", avg24h: "15", peak: "89", trend: "📈" },
 ];
 
-// Long log lines to demonstrate horizontal scroll
+// Long messages → demonstrates horizontal scroll
 const logColumns = [
   { key: "time", label: "Timestamp", width: 12 },
   { key: "level", label: "Level", width: 7 },
   { key: "source", label: "Source", width: 14 },
-  { key: "message", label: "Message", width: 80 },
+  { key: "message", label: "Message", width: 120 },
 ];
-
 const logRows = [
-  { time: "14:23:01.42", level: "INFO", source: "api-gateway", message: "Request processed: GET /api/v2/users?limit=50&offset=100&sort=created_at&order=desc — 200 OK — 23ms response time" },
-  { time: "14:23:01.89", level: "WARN", source: "cache-node", message: "Cache eviction triggered: memory usage at 89%, evicting 1,247 entries from LRU cache, consider scaling up cache cluster" },
-  { time: "14:23:02.15", level: "INFO", source: "auth-svc", message: "JWT token refreshed for user_id=8842 session_id=sess_abc123def456 — new expiry: 2026-04-02T15:23:02Z" },
-  { time: "14:23:02.34", level: "ERROR", source: "notif-svc", message: "Connection refused: smtp://mail.internal:587 — retry 3/5 — Error: ECONNREFUSED — check mail server health" },
-  { time: "14:23:02.67", level: "INFO", source: "worker-pool", message: "Job batch completed: processed 500/500 items in 2.3s — average 4.6ms/item — queue depth: 23 remaining" },
-  { time: "14:23:03.01", level: "DEBUG", source: "search-idx", message: "Reindexing shard 7/12: 45,000 documents processed, 12,000 remaining — estimated completion: 14:25:30" },
-  { time: "14:23:03.45", level: "INFO", source: "analytics", message: "Daily aggregation complete: 2.4M events processed — storage: 847MB compressed — dashboards refreshed" },
-  { time: "14:23:03.89", level: "WARN", source: "db-primary", message: "Slow query detected: SELECT * FROM orders JOIN users ON... — execution time: 3.2s — consider adding index on orders.user_id" },
+  { time: "14:23:01.42", level: "INFO", source: "api-gateway", message: "Request processed: GET /api/v2/users?limit=50&offset=100&sort=created_at&order=desc — 200 OK — 23ms response time — cache: HIT" },
+  { time: "14:23:01.89", level: "WARN", source: "cache-node", message: "Cache eviction triggered: memory usage at 89%, evicting 1,247 entries from LRU cache — consider scaling up the cache cluster" },
+  { time: "14:23:02.15", level: "INFO", source: "auth-svc", message: "JWT token refreshed for user_id=8842 session_id=sess_abc123def456 — new expiry: 2026-04-02T15:23:02Z — scope: read,write" },
+  { time: "14:23:02.34", level: "ERROR", source: "notif-svc", message: "Connection refused: smtp://mail.internal:587 — retry 3/5 — Error: ECONNREFUSED — check mail server health and firewall rules" },
+  { time: "14:23:02.67", level: "INFO", source: "worker-pool", message: "Job batch completed: processed 500/500 items in 2.3s — average 4.6ms/item — queue depth: 23 remaining — next batch in 5s" },
+  { time: "14:23:03.01", level: "DEBUG", source: "search-idx", message: "Reindexing shard 7/12: 45,000 documents processed, 12,000 remaining — estimated completion: 14:25:30 — throughput: 2,500 docs/s" },
+  { time: "14:23:03.45", level: "INFO", source: "analytics", message: "Daily aggregation complete: 2.4M events processed — storage: 847MB compressed — dashboards refreshed — next run: 2026-04-03T00:00Z" },
+  { time: "14:23:03.89", level: "WARN", source: "db-primary", message: "Slow query detected: SELECT * FROM orders JOIN users ON orders.user_id = users.id WHERE... — execution time: 3.2s — add index" },
 ];
 
 const dataTable = new Table({
@@ -163,32 +152,23 @@ const dataTable = new Table({
   margin: 0,
   scrollable: true,
   style: {
-    border: { style: "single", fg: "#3A3A3C" },
-    padding: { left: 1, top: 0 },
-    fg: "white",
+    border: { style: "single", fg: "border" },
+    padding: { left: 1 },
+    fg: "text",
   },
-  focusStyle: { border: { style: "double", fg: "#5B9BD5" } },
-  props: {
-    columns: serviceColumns,
-    rows: serviceRows,
-  },
+  focusStyle: { border: { style: "double", fg: "primary" } },
+  props: { columns: serviceColumns, rows: serviceRows },
 });
 
 function switchTab(id: string) {
-  if (id === "services") {
-    dataTable.setProps({ columns: serviceColumns, rows: serviceRows });
-  } else if (id === "metrics") {
-    dataTable.setProps({ columns: metricsColumns, rows: metricsRows });
-  } else if (id === "logs") {
-    dataTable.setProps({ columns: logColumns, rows: logRows });
-  }
+  if (id === "services") dataTable.setProps({ columns: serviceColumns, rows: serviceRows });
+  else if (id === "metrics") dataTable.setProps({ columns: metricsColumns, rows: metricsRows });
+  else if (id === "logs") dataTable.setProps({ columns: logColumns, rows: logRows });
 }
 
 // ── Sidebar ──────────────────────────────────────────────────────────
-
-// Spinner with cycling styles
 const spinnerStyles = ["dots", "line", "arc", "bouncingBar"] as const;
-let spinnerStyleIndex = 0;
+let spinnerIdx = 0;
 
 const spinner = new Spinner({
   id: "spinner",
@@ -199,15 +179,11 @@ const spinner = new Spinner({
   width: "30%",
   height: 3,
   margin: 0,
-  style: {
-    border: { style: "rounded", fg: "#AF52DE" },
-    fg: "#AF52DE",
-    padding: { left: 1 },
-  },
+  style: { border: { style: "rounded", fg: "accent" }, fg: "accent", padding: { left: 1 } },
   props: { label: "Syncing data...", style: "dots" },
 });
 
-// Status panel showing mouse/hover info
+// Mouse status panel
 const statusPanel = createComponent({
   id: "status",
   position: {
@@ -217,36 +193,29 @@ const statusPanel = createComponent({
   width: "30%",
   height: 5,
   margin: 0,
-  style: {
-    border: { style: "rounded", fg: "#8E8E93" },
-    padding: { left: 1 },
-    fg: "white",
-  },
-  focusStyle: { border: { style: "rounded", fg: "#FFD700" } },
-  props: { mouseInfo: "Move mouse over components", hoverTarget: "—", clicks: 0 },
-  render: (props: { mouseInfo: string; hoverTarget: string; clicks: number }, ctx?: RenderContext) => {
-    const focusLabel = ctx?.focused ? " 🎯 FOCUSED" : "";
-    const hoverLabel = ctx?.hovered ? " ✨ HOVERED" : "";
+  style: { border: { style: "rounded", fg: "muted" }, padding: { left: 1 }, fg: "text" },
+  focusStyle: { border: { style: "rounded", fg: "warning" } },
+  props: { hoverTarget: "—", clicks: 0 },
+  render: (props: { hoverTarget: string; clicks: number }, ctx?: RenderContext) => {
+    const f = ctx?.focused ? " 🎯" : "";
+    const h = ctx?.hovered ? " ✨" : "";
     return [
-      { text: `🖱️  Mouse Panel${focusLabel}${hoverLabel}`, style: { bold: true } },
+      { text: `🖱️  Mouse Panel${f}${h}`, style: { bold: true } },
       { text: "" },
-      { text: `Hovering: ${props.hoverTarget}` },
-      { text: `Clicks: ${props.clicks}`, style: { fg: "#34C759" } },
+      { text: `Hover: ${props.hoverTarget}`, style: { fg: "secondary" } },
+      { text: `Clicks: ${props.clicks}`, style: { fg: "success" } },
     ];
   },
 });
 
-// Track clicks on status panel
 let clickCount = 0;
 statusPanel.on("click", () => {
   clickCount++;
   statusPanel.setProps({ ...statusPanel.props, clicks: clickCount });
 });
 
-// Track hover on all components
-const hoverableIds = ["header", "tabs", "table", "spinner", "status", "chk-theme", "chk-notify", "chk-spinner", "progress", "footer"];
-
-const checkbox1 = new Checkbox({
+// Checkboxes — all use theme tokens
+const chkTheme = new Checkbox({
   id: "chk-theme",
   position: {
     x: { position: "right", relativeTo: "table" },
@@ -255,18 +224,13 @@ const checkbox1 = new Checkbox({
   width: "30%",
   height: 1,
   margin: 0,
-  style: { padding: { left: 2 }, fg: "white" },
-  focusStyle: { fg: "#FFD700", bold: true },
-  props: { checked: false, label: "🌙 Dark / ☀️ Light" },
-  onChange: (checked) => {
-    currentThemeName = checked ? "light" : "dark";
-    app.setTheme(checked ? lightTheme : darkTheme);
-    // Force full re-render with new theme
-    app.render();
-  },
+  style: { padding: { left: 2 }, fg: "text" },
+  focusStyle: { fg: "warning", bold: true },
+  props: { checked: false, label: "☀️ Light theme" },
+  onChange: (checked) => toggleTheme(checked),
 });
 
-const checkbox2 = new Checkbox({
+const chkNotify = new Checkbox({
   id: "chk-notify",
   position: {
     x: { position: "right", relativeTo: "table" },
@@ -275,12 +239,18 @@ const checkbox2 = new Checkbox({
   width: "30%",
   height: 1,
   margin: 0,
-  style: { padding: { left: 2 }, fg: "white" },
-  focusStyle: { fg: "#FFD700", bold: true },
+  style: { padding: { left: 2 }, fg: "text" },
+  focusStyle: { fg: "warning", bold: true },
   props: { checked: true, label: "🔔 Notifications" },
+  onChange: (checked) => {
+    spinner.setProps({
+      ...spinner.props,
+      label: checked ? "Syncing data..." : "Notifications off",
+    });
+  },
 });
 
-const checkbox3 = new Checkbox({
+const chkSpinner = new Checkbox({
   id: "chk-spinner",
   position: {
     x: { position: "right", relativeTo: "table" },
@@ -289,29 +259,26 @@ const checkbox3 = new Checkbox({
   width: "30%",
   height: 1,
   margin: 0,
-  style: { padding: { left: 2 }, fg: "white" },
-  focusStyle: { fg: "#FFD700", bold: true },
-  props: { checked: false, label: "🔄 Cycle spinner style" },
-  onChange: (checked) => {
-    if (checked) {
-      spinnerStyleIndex = (spinnerStyleIndex + 1) % spinnerStyles.length;
-      const newStyle = spinnerStyles[spinnerStyleIndex]!;
-      spinner.setProps({ ...spinner.props, style: newStyle, frameIndex: 0 });
-    }
+  style: { padding: { left: 2 }, fg: "text" },
+  focusStyle: { fg: "warning", bold: true },
+  props: { checked: false, label: "🔄 Next spinner style" },
+  onChange: () => {
+    spinnerIdx = (spinnerIdx + 1) % spinnerStyles.length;
+    spinner.setProps({ ...spinner.props, style: spinnerStyles[spinnerIdx], frameIndex: 0 });
+    // Auto-uncheck so you can press again
+    setTimeout(() => chkSpinner.setProps({ checked: false }), 200);
   },
 });
 
-// Progress bars with animation
+// Progress bars
 const cpuBar = new ProgressBar({
   id: "cpu-bar",
   position: {
     x: { position: "right", relativeTo: "table" },
     y: { position: "bottom", relativeTo: "chk-spinner" },
   },
-  width: "30%",
-  height: 1,
-  margin: 0,
-  style: { fg: "#FF9500", padding: { left: 2 } },
+  width: "30%", height: 1, margin: 0,
+  style: { fg: "warning", padding: { left: 2 } },
   props: { value: 0.45, label: "CPU" },
 });
 
@@ -321,10 +288,8 @@ const memBar = new ProgressBar({
     x: { position: "right", relativeTo: "table" },
     y: { position: "bottom", relativeTo: "cpu-bar" },
   },
-  width: "30%",
-  height: 1,
-  margin: 0,
-  style: { fg: "#5B9BD5", padding: { left: 2 } },
+  width: "30%", height: 1, margin: 0,
+  style: { fg: "primary", padding: { left: 2 } },
   props: { value: 0.62, label: "MEM" },
 });
 
@@ -334,14 +299,12 @@ const dskBar = new ProgressBar({
     x: { position: "right", relativeTo: "table" },
     y: { position: "bottom", relativeTo: "mem-bar" },
   },
-  width: "30%",
-  height: 1,
-  margin: 0,
-  style: { fg: "#FF3B30", padding: { left: 2 } },
+  width: "30%", height: 1, margin: 0,
+  style: { fg: "danger", padding: { left: 2 } },
   props: { value: 0.87, label: "DSK" },
 });
 
-// ── Footer with live help ────────────────────────────────────────────
+// ── Footer ───────────────────────────────────────────────────────────
 const footer = createComponent({
   id: "footer",
   position: {
@@ -352,65 +315,62 @@ const footer = createComponent({
   height: 1,
   margin: 0,
   props: {},
-  render: (_props: {}, ctx?: RenderContext) => {
-    const hoverHint = ctx?.hovered ? " (hovered!)" : "";
-    return {
-      text: "",
-      segments: [
-        { text: " Tab", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":navigate" },
-        { text: "  ←→", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":tabs/scroll-H" },
-        { text: "  ↑↓", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":scroll-V" },
-        { text: "  Space", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":toggle" },
-        { text: "  m", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":modal" },
-        { text: "  t", style: { bold: true, fg: "#5B9BD5" } },
-        { text: ":theme" },
-        { text: "  🖱️ Click/Hover", style: { fg: "#8E8E93" } },
-        { text: hoverHint, style: { fg: "#34C759", bold: true } },
-        { text: "  Ctrl+C", style: { bold: true, fg: "#FF3B30" } },
-        { text: ":quit" },
-      ],
-    };
-  },
+  render: () => ({
+    text: "",
+    segments: [
+      { text: " Tab", style: { bold: true, fg: "primary" } },
+      { text: ":focus" },
+      { text: "  ←→", style: { bold: true, fg: "primary" } },
+      { text: ":tabs/scroll-H" },
+      { text: "  ↑↓", style: { bold: true, fg: "primary" } },
+      { text: ":scroll-V" },
+      { text: "  Space", style: { bold: true, fg: "primary" } },
+      { text: ":toggle" },
+      { text: "  m", style: { bold: true, fg: "primary" } },
+      { text: ":modal" },
+      { text: "  t", style: { bold: true, fg: "primary" } },
+      { text: ":theme" },
+      { text: "  Ctrl+C", style: { bold: true, fg: "danger" } },
+      { text: ":quit" },
+    ],
+  }),
 });
 
-// ── Modal ────────────────────────────────────────────────────────────
+// ── Modal — centered, opaque bg ──────────────────────────────────────
+const modalW = 54;
+const modalH = 12;
+const termW = process.stdout.columns ?? 100;
+const termH = process.stdout.rows ?? 30;
+
 const modal = new Modal({
   id: "modal",
-  position: { x: 15, y: 5 },
-  width: 50,
-  height: 12,
+  position: { x: Math.max(0, Math.floor((termW - modalW) / 2)), y: Math.max(0, Math.floor((termH - modalH) / 2)) },
+  width: modalW,
+  height: modalH,
   margin: 0,
   style: {
-    border: { style: "double", fg: "#FF3B30" },
-    fg: "white",
+    border: { style: "double", fg: "danger" },
+    fg: "text",
     padding: { left: 2, top: 1, right: 2, bottom: 1 },
-    bg: "#2C2C2E",
+    bg: "surface",
   },
   props: {
     title: "⚠️  Confirm Action",
-    body: "Are you sure you want to restart all services?\nThis will cause approximately 30s of downtime.\n\nUse ←→ to navigate, Enter to confirm, Esc to cancel.",
+    body: "Are you sure you want to restart all services?\nThis will cause ~30s of downtime.\n\n←→ navigate buttons, Enter confirm, Esc cancel",
     buttons: [
-      {
-        label: "🔄 Restart",
-        style: { fg: "#FF3B30" },
-        action: () => {
-          app.hideOverlay(modal);
-        },
-      },
-      {
-        label: "❌ Cancel",
-        action: () => {
-          app.hideOverlay(modal);
-        },
-      },
+      { label: "🔄 Restart", style: { fg: "danger" }, action: () => app.hideOverlay(modal) },
+      { label: "❌ Cancel", action: () => app.hideOverlay(modal) },
     ],
   },
 });
+
+// ── Theme toggle ─────────────────────────────────────────────────────
+function toggleTheme(light: boolean) {
+  currentThemeName = light ? "light" : "dark";
+  app.setTheme(light ? lightTheme : darkTheme);
+  chkTheme.setProps({ checked: light, label: light ? "🌙 Dark theme" : "☀️ Light theme" });
+  app.render();
+}
 
 // ── App assembly ─────────────────────────────────────────────────────
 app
@@ -419,79 +379,48 @@ app
   .add(dataTable, true)
   .add(spinner)
   .add(statusPanel, true)
-  .add(checkbox1, true)
-  .add(checkbox2, true)
-  .add(checkbox3, true)
+  .add(chkTheme, true)
+  .add(chkNotify, true)
+  .add(chkSpinner, true)
   .add(cpuBar)
   .add(memBar)
   .add(dskBar)
   .add(footer);
 
-// ── Hover tracking on all components ────────────────────────────────
-for (const id of hoverableIds) {
-  const comp = [header, tabs, dataTable, spinner, statusPanel, checkbox1, checkbox2, checkbox3, cpuBar, memBar, dskBar, footer]
-    .find(c => c.id === id);
-  if (comp) {
-    comp.on("mouseenter", () => {
-      statusPanel.setProps({ ...statusPanel.props, hoverTarget: id });
-    });
-    comp.on("mouseleave", () => {
-      if (statusPanel.props.hoverTarget === id) {
-        statusPanel.setProps({ ...statusPanel.props, hoverTarget: "—" });
-      }
-    });
-  }
+// ── Hover tracking ──────────────────────────────────────────────────
+const allComponents = [header, tabs, dataTable, spinner, statusPanel, chkTheme, chkNotify, chkSpinner, cpuBar, memBar, dskBar, footer];
+for (const comp of allComponents) {
+  comp.on("mouseenter", () => {
+    statusPanel.setProps({ ...statusPanel.props, hoverTarget: comp.id });
+  });
+  comp.on("mouseleave", () => {
+    if (statusPanel.props.hoverTarget === comp.id) {
+      statusPanel.setProps({ ...statusPanel.props, hoverTarget: "—" });
+    }
+  });
 }
 
-// ── Keyboard shortcuts ──────────────────────────────────────────────
-app.onKey("ctrl+c", () => {
-  app.stop();
-  process.exit(0);
-});
+// ── Keys ─────────────────────────────────────────────────────────────
+app.onKey("ctrl+c", () => { app.stop(); process.exit(0); });
+app.onKey("m", () => app.showOverlay(modal, true));
+app.onKey("t", () => toggleTheme(currentThemeName !== "light"));
 
-app.onKey("m", () => {
-  app.showOverlay(modal, true);
-});
-
-app.onKey("t", () => {
-  const isLight = currentThemeName === "light";
-  currentThemeName = isLight ? "dark" : "light";
-  app.setTheme(isLight ? darkTheme : lightTheme);
-  checkbox1.setProps({ checked: !isLight });
-  app.render();
-});
-
-// ── Animations: simulate live CPU/MEM fluctuation ───────────────────
+// ── Animations ──────────────────────────────────────────────────────
 function animateMetrics() {
-  const cpuTarget = 0.3 + Math.random() * 0.6;
-  const memTarget = 0.4 + Math.random() * 0.5;
-
-  app.animate(cpuBar, { value: cpuTarget }, { duration: 2000, easing: easeInOut });
-  app.animate(memBar, { value: memTarget }, { duration: 2500, easing: easeInOut });
+  app.animate(cpuBar, { value: 0.3 + Math.random() * 0.6 }, { duration: 2000, easing: easeInOut });
+  app.animate(memBar, { value: 0.4 + Math.random() * 0.5 }, { duration: 2500, easing: easeInOut });
 }
-
-// Initial animation
 animateMetrics();
+const animInterval = setInterval(animateMetrics, 3000);
 
-// Re-animate every 3 seconds
-let animInterval: ReturnType<typeof setInterval>;
-animInterval = setInterval(() => {
-  animateMetrics();
-}, 3000);
-
-// Cycle spinner style every 5 seconds
-let spinnerInterval = setInterval(() => {
-  spinnerStyleIndex = (spinnerStyleIndex + 1) % spinnerStyles.length;
-  const newStyle = spinnerStyles[spinnerStyleIndex]!;
-  spinner.setProps({ ...spinner.props, style: newStyle, frameIndex: 0 });
+// Auto-cycle spinner style
+const spinnerInterval = setInterval(() => {
+  spinnerIdx = (spinnerIdx + 1) % spinnerStyles.length;
+  spinner.setProps({ ...spinner.props, style: spinnerStyles[spinnerIdx], frameIndex: 0 });
 }, 5000);
 
-// Cleanup intervals on stop
+// Cleanup
 const origStop = app.stop.bind(app);
-app.stop = () => {
-  clearInterval(animInterval);
-  clearInterval(spinnerInterval);
-  origStop();
-};
+app.stop = () => { clearInterval(animInterval); clearInterval(spinnerInterval); origStop(); };
 
 app.start();

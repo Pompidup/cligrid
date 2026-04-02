@@ -25,7 +25,7 @@ class Checkbox extends Component<CheckboxProps> {
     this._onChange = config.onChange;
 
     this.on("keypress", (event) => {
-      if (event.key === " " || event.key === "enter") {
+      if (event.key === "space" || event.key === " " || event.key === "enter") {
         const newChecked = !this.props.checked;
         this.setProps({ checked: newChecked });
         this._onChange?.(newChecked);
