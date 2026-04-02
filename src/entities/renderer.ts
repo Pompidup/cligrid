@@ -206,6 +206,7 @@ class Renderer {
       width: contentWidth,
       height: contentHeight,
       focused: false,
+      hovered: component.hovered,
       terminalWidth: this.terminalWidth,
       terminalHeight: this.terminalHeight,
     };

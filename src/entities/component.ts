@@ -57,6 +57,7 @@ type RenderContext = {
   width: number;
   height: number;
   focused: boolean;
+  hovered: boolean;
   terminalWidth: number;
   terminalHeight: number;
 };
@@ -135,6 +136,7 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   flex?: number;
   scrollable: boolean;
   zIndex: number;
+  hovered: boolean = false;
   private _mounted: boolean = false;
   private _scrollOffset: number = 0;
   private _totalLines: number = 0;
