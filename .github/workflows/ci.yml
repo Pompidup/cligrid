@@ -59,9 +59,6 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@latest
-
       - name: Set version from release tag
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
 
@@ -70,4 +67,4 @@ jobs:
       - run: pnpm build
 
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        run: npx npm@latest publish --access public --provenance
