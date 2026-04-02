@@ -83,6 +83,7 @@ type ComponentConfig<P extends Props = {}> = {
   flex?: number;
   scrollable?: boolean;
   zIndex?: number;
+  focusStyle?: Partial<Style>;
   onKeyPress?: (event: KeyEvent, component: Component<P>) => void;
 };
 
@@ -137,9 +138,12 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   scrollable: boolean;
   zIndex: number;
   hovered: boolean = false;
+  focusStyle?: Partial<Style>;
   private _mounted: boolean = false;
   private _scrollOffset: number = 0;
+  private _scrollXOffset: number = 0;
   private _totalLines: number = 0;
+  private _totalColumns: number = 0;
   private _absolutePosition?: AbsolutePosition;
   props: P;
   private isDirty: boolean = true;
@@ -190,6 +194,7 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.flex = config.flex;
       this.scrollable = config.scrollable ?? false;
       this.zIndex = config.zIndex ?? 0;
+      this.focusStyle = config.focusStyle;
       if (config.onKeyPress) {
         this.on("keypress", (event: KeyEvent) => {
           config.onKeyPress!(event, this);
@@ -331,6 +336,36 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
 
   scrollBy(delta: number): void {
     this.scrollTo(this._scrollOffset + delta);
+  }
+
+  get scrollXOffset(): number {
+    return this._scrollXOffset;
+  }
+
+  get totalColumns(): number {
+    return this._totalColumns;
+  }
+
+  setTotalColumns(total: number): void {
+    this._totalColumns = total;
+  }
+
+  scrollToX(offset: number): void {
+    const maxOffset = Math.max(0, this._totalColumns - this.getContentWidth());
+    this._scrollXOffset = Math.max(0, Math.min(offset, maxOffset));
+    this.markDirty();
+    this.emit("scroll", this._scrollXOffset);
+    this.emit("propsChanged", this);
+  }
+
+  scrollByX(delta: number): void {
+    this.scrollToX(this._scrollXOffset + delta);
+  }
+
+  private getContentWidth(): number {
+    if (!this._absolutePosition) return 0;
+    const insets = getBoxInsets(this.style);
+    return this._absolutePosition.width - insets.left - insets.right;
   }
 
   private getContentHeight(): number {
