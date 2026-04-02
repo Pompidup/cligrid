@@ -1,5 +1,5 @@
 import type { Component } from "./component.js";
-import type { KeyEvent } from "./inputManager.js";
+import type { KeyEvent, MouseEvent } from "./inputManager.js";
 import type { TerminalDimensions } from "../port/terminalDimensions.js";
 import type { EasingFn } from "../utils/easing.js";
 import type { AnimationId } from "./animator.js";
@@ -13,6 +13,7 @@ import { getTerminalDimensions } from "../../config/terminalDimensionsFactory.js
 type AppOptions = {
   terminalDimensions?: TerminalDimensions;
   alternateScreen?: boolean;
+  mouse?: boolean;
 };
 
 class App {
@@ -24,15 +25,18 @@ class App {
   private keyHandlers: Map<string, (() => void)[]> = new Map();
   private running = false;
   private useAlternateScreen: boolean;
+  private useMouse: boolean;
   private signalHandlers: (() => void)[] = [];
   private previousFocus?: Component;
   private overlays: Set<string> = new Set();
   private _state: Record<string, any> = {};
   private connectedComponents: Map<string, { component: Component; selector: (state: Record<string, any>) => Record<string, any> }> = new Map();
+  private _hoveredComponent: Component | null = null;
 
   constructor(options: AppOptions = {}) {
     const dims = options.terminalDimensions ?? getTerminalDimensions();
     this.useAlternateScreen = options.alternateScreen ?? false;
+    this.useMouse = options.mouse ?? false;
 
     this.template = new Template(dims);
     this.renderer = new Renderer(this.template, dims);
@@ -59,6 +63,10 @@ class App {
 
       // Then dispatch to focus manager
       this.focusManager.handleKeyEvent(event);
+    });
+
+    this.inputManager.on("mouse", (event: MouseEvent) => {
+      this.handleMouseEvent(event);
     });
   }
 
@@ -98,6 +106,11 @@ class App {
     process.stdout.write("\x1b[?25l");
 
     this.inputManager.start();
+
+    if (this.useMouse) {
+      this.inputManager.enableMouse();
+    }
+
     this.renderer.render();
 
     // Setup signal handlers for graceful shutdown
@@ -143,6 +156,10 @@ class App {
 
   get focus(): FocusManager {
     return this.focusManager;
+  }
+
+  get hoveredComponent(): Component | null {
+    return this._hoveredComponent;
   }
 
   showOverlay(component: Component, focusable = true): this {
@@ -254,6 +271,85 @@ class App {
 
   tick(callback: (dt: number) => void): () => void {
     return this.animator.onTick(callback);
+  }
+
+  hitTest(x: number, y: number): Component | null {
+    // Sort by z-index descending (highest first)
+    const sorted = [...this.template.components].sort((a, b) => b.zIndex - a.zIndex);
+
+    for (const component of sorted) {
+      const hit = this.hitTestComponent(component, x, y);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  private hitTestComponent(component: Component, x: number, y: number): Component | null {
+    // Check children first (they render on top)
+    for (let i = component.children.length - 1; i >= 0; i--) {
+      const hit = this.hitTestComponent(component.children[i]!, x, y);
+      if (hit) return hit;
+    }
+
+    const pos = component.absolutePosition;
+    if (!pos) return null;
+
+    if (x >= pos.x && x < pos.x + pos.width && y >= pos.y && y < pos.y + pos.height) {
+      return component;
+    }
+    return null;
+  }
+
+  private handleMouseEvent(event: MouseEvent): void {
+    const target = this.hitTest(event.x, event.y);
+
+    // Handle hover detection
+    this.updateHover(target, event);
+
+    if (!target) return;
+
+    switch (event.type) {
+      case "click":
+        target.emit("mousedown", event);
+        target.emit("click", event);
+        break;
+      case "release":
+        target.emit("mouseup", event);
+        break;
+      case "scroll-up":
+        target.emit("scroll", { ...event, direction: -1 });
+        if (target.scrollable) {
+          target.scrollBy(-1);
+        }
+        break;
+      case "scroll-down":
+        target.emit("scroll", { ...event, direction: 1 });
+        if (target.scrollable) {
+          target.scrollBy(1);
+        }
+        break;
+      case "move":
+        target.emit("mousemove", event);
+        break;
+    }
+  }
+
+  private updateHover(target: Component | null, _event: MouseEvent): void {
+    const prev = this._hoveredComponent;
+
+    if (prev === target) return;
+
+    if (prev) {
+      prev.hovered = false;
+      prev.emit("mouseleave");
+    }
+
+    if (target) {
+      target.hovered = true;
+      target.emit("mouseenter");
+    }
+
+    this._hoveredComponent = target;
   }
 
   private keyCombo(event: KeyEvent): string {
