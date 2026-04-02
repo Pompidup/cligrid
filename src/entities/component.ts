@@ -34,7 +34,20 @@ type AbsolutePosition = {
   height: number;
 };
 
-type RenderLine = { text: string; style?: Partial<Style> };
+type StyledSegment = {
+  text: string;
+  style?: Partial<Style>;
+};
+
+type TextAlign = "left" | "center" | "right";
+
+type RenderLine = {
+  text: string;
+  style?: Partial<Style>;
+  segments?: StyledSegment[];
+  align?: TextAlign;
+};
+
 type RenderOutput = string | RenderLine | RenderLine[];
 
 type RenderContext = {
@@ -318,5 +331,5 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   }
 }
 
-export type { Size, SizeInput, Position, PositionInput, Props, AbsolutePosition, RenderLine, RenderOutput, RenderContext, ComponentConfig, LayoutDirection };
+export type { Size, SizeInput, Position, PositionInput, Props, AbsolutePosition, StyledSegment, TextAlign, RenderLine, RenderOutput, RenderContext, ComponentConfig, LayoutDirection };
 export { Component, parseSize, parsePosition };

@@ -4,7 +4,8 @@ import type { Component, RenderOutput, RenderLine, RenderContext } from "./compo
 import { ScreenBuffer } from "./screenBuffer.js";
 import { BORDER_CHARS, getBoxInsets } from "./style.js";
 import { stylize } from "../utils/ansi.js";
-import { applyOverflow } from "../utils/text.js";
+import { applySegmentOverflow, segmentsWidth } from "../utils/text.js";
+import type { SegmentLine } from "../utils/text.js";
 import { getTerminalDimensions } from "./../../config/terminalDimensionsFactory.js";
 
 class Renderer {
@@ -211,39 +212,59 @@ class Renderer {
     const renderLines = this.normalizeRenderOutput(output);
     const overflowMode = style?.overflow ?? "hidden";
 
-    // Apply overflow to all text lines
-    const rawTexts = renderLines.map((rl) => rl.text);
-    const processedTexts = applyOverflow(rawTexts, contentWidth, overflowMode);
+    // Convert RenderLines to SegmentLines (merge line-level style into segments)
+    const segmentLines: SegmentLine[] = renderLines.map((rl) => ({
+      segments: (rl.segments ?? [{ text: rl.text, style: rl.style }]).map((seg) => ({
+        text: seg.text,
+        style: seg.style
+          ? (rl.segments && rl.style ? { ...rl.style, ...seg.style } : seg.style)
+          : (rl.segments ? rl.style : seg.style),
+      })),
+      align: rl.align,
+    }));
 
-    // Map processed lines back to styles (wrap/wrap-word may produce more lines)
-    const styledLines = this.mapProcessedLines(renderLines, processedTexts, overflowMode);
+    // Apply segment-aware overflow
+    const processedLines = applySegmentOverflow(segmentLines, contentWidth, overflowMode);
 
     // Track total lines for scrollable components
-    component.setTotalLines(styledLines.length);
+    component.setTotalLines(processedLines.length);
 
     // Apply scroll offset
     const scrollOffset = component.scrollable ? component.scrollOffset : 0;
-    const visibleLines = styledLines.slice(scrollOffset);
+    const visibleLines = processedLines.slice(scrollOffset);
 
     for (let i = 0; i < visibleLines.length; i++) {
       const lineY = y + insets.top + i;
       if (lineY >= y + height - insets.bottom) break;
 
-      const { text, style: lineOverride } = visibleLines[i]!;
-      const lineStyle = lineOverride
-        ? { ...baseStyle, ...lineOverride }
-        : baseStyle;
-      this.backBuffer.write(x + insets.left, lineY, text, lineStyle);
+      const { segments, align } = visibleLines[i]!;
+      const lineWidth = segmentsWidth(segments);
+
+      // Calculate alignment offset
+      let alignOffset = 0;
+      if (align === "center") {
+        alignOffset = Math.max(0, Math.floor((contentWidth - lineWidth) / 2));
+      } else if (align === "right") {
+        alignOffset = Math.max(0, contentWidth - lineWidth);
+      }
+
+      // Write each segment individually with merged styles
+      let cursorX = x + insets.left + alignOffset;
+      for (const seg of segments) {
+        const segStyle = seg.style ? { ...baseStyle, ...seg.style } : baseStyle;
+        this.backBuffer.write(cursorX, lineY, seg.text, segStyle);
+        cursorX += seg.text.length;
+      }
     }
 
     // Draw scroll indicator if scrollable and content overflows
-    if (component.scrollable && styledLines.length > contentHeight && contentHeight > 0) {
+    if (component.scrollable && processedLines.length > contentHeight && contentHeight > 0) {
       this.drawScrollIndicator(
         x + width - 1 - (insets.right > 0 ? 1 : 0),
         y + insets.top,
         contentHeight,
         scrollOffset,
-        styledLines.length,
+        processedLines.length,
         style?.dim ? { dim: true } : undefined
       );
     }
@@ -270,53 +291,6 @@ class Renderer {
       const char = isThumb ? "█" : "░";
       this.backBuffer.write(colX, startY + i, char, indicatorStyle);
     }
-  }
-
-  private mapProcessedLines(
-    original: RenderLine[],
-    processed: string[],
-    mode: string
-  ): RenderLine[] {
-    if (mode === "hidden" || mode === "ellipsis") {
-      // 1:1 mapping — same number of lines
-      return processed.map((text, i) => ({
-        text,
-        style: original[i]?.style,
-      }));
-    }
-
-    // For wrap modes, lines may have expanded. Map expanded lines back to original styles.
-    const result: RenderLine[] = [];
-    let processedIdx = 0;
-
-    for (const orig of original) {
-      // Count how many processed lines this original line produced
-      const origText = orig.text;
-      let consumed = 0;
-      let rebuilt = "";
-
-      while (processedIdx < processed.length) {
-        const chunk = processed[processedIdx]!;
-        const nextRebuilt = rebuilt + (rebuilt.length > 0 ? " " : "") + chunk;
-
-        // Check if we've consumed enough characters for this original line
-        // Use raw length comparison: when all chars of origText are covered
-        consumed += chunk.length;
-        result.push({ text: chunk, style: orig.style });
-        processedIdx++;
-
-        if (consumed >= origText.length) break;
-        rebuilt = nextRebuilt;
-      }
-    }
-
-    // Any remaining processed lines (shouldn't happen, but safety)
-    while (processedIdx < processed.length) {
-      result.push({ text: processed[processedIdx]! });
-      processedIdx++;
-    }
-
-    return result;
   }
 
   private normalizeRenderOutput(output: RenderOutput): RenderLine[] {

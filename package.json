@@ -38,7 +38,8 @@
     "demo:dashboard": "tsx demo/dashboard.ts",
     "demo:form": "tsx demo/interactive-form.ts",
     "demo:advanced": "tsx demo/advanced.ts",
-    "demo:castle": "tsx demo/castle.ts"
+    "demo:castle": "tsx demo/castle.ts",
+    "demo:segments": "tsx demo/styled-segments.ts"
   },
   "packageManager": "pnpm@10.30.3",
   "engines": {
