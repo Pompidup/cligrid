@@ -64,6 +64,10 @@ type ComponentConfig<P extends Props = {}> = {
   position: PositionInput;
   width: SizeInput;
   height: SizeInput;
+  minWidth?: SizeInput;
+  maxWidth?: SizeInput;
+  minHeight?: SizeInput;
+  maxHeight?: SizeInput;
   props?: P;
   margin?: number;
   style?: Style;
@@ -113,6 +117,10 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   position: Position;
   width: Size;
   height: Size;
+  minWidth?: Size;
+  maxWidth?: Size;
+  minHeight?: Size;
+  maxHeight?: Size;
   margin: number;
   style?: Style;
   layout: LayoutDirection;
@@ -159,6 +167,10 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.position = parsePosition(config.position);
       this.width = parseSize(config.width);
       this.height = parseSize(config.height);
+      if (config.minWidth !== undefined) this.minWidth = parseSize(config.minWidth);
+      if (config.maxWidth !== undefined) this.maxWidth = parseSize(config.maxWidth);
+      if (config.minHeight !== undefined) this.minHeight = parseSize(config.minHeight);
+      if (config.maxHeight !== undefined) this.maxHeight = parseSize(config.maxHeight);
       this.props = (config.props ?? {}) as P;
       this.margin = config.margin ?? 1;
       this.style = config.style;

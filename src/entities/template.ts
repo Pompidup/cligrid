@@ -1,7 +1,7 @@
 import EventEmitter from "node:events";
 import { getTerminalDimensions } from "./../../config/terminalDimensionsFactory.js";
 import type { TerminalDimensions } from "src/port/terminalDimensions.js";
-import type { Component, AbsolutePosition } from "./component.js";
+import type { Component, AbsolutePosition, Size } from "./component.js";
 import { getBoxInsets } from "./style.js";
 
 class Template extends EventEmitter {
@@ -213,13 +213,17 @@ class Template extends EventEmitter {
     contentHeight: number
   ): void {
     for (const child of parent.children) {
-      const childWidth = this.resolveChildSize(child.width, contentWidth);
+      let childWidth = this.resolveChildSize(child.width, contentWidth);
       let childHeight = this.resolveChildSize(child.height, contentHeight);
 
       // Auto-height: compute from render output
       if (child.height.unit === "auto") {
         childHeight = this.computeAutoHeight(child, contentHeight);
       }
+
+      // Apply min/max constraints
+      childWidth = this.clampSize(childWidth, child.minWidth, child.maxWidth, contentWidth);
+      childHeight = this.clampSize(childHeight, child.minHeight, child.maxHeight, contentHeight);
 
       let childX = contentX;
       let childY = contentY;
@@ -274,6 +278,12 @@ class Template extends EventEmitter {
         h = this.computeAutoHeight(child, contentHeight);
       }
 
+      // Apply min/max constraints to non-flex children in Pass 1
+      if (!(child.flex !== undefined && child.flex > 0)) {
+        w = this.clampSize(w, child.minWidth, child.maxWidth, contentWidth);
+        h = this.clampSize(h, child.minHeight, child.maxHeight, contentHeight);
+      }
+
       if (child.flex !== undefined && child.flex > 0) {
         totalFlex += child.flex;
         // Margin still takes space in the main axis
@@ -317,6 +327,10 @@ class Template extends EventEmitter {
         }
       }
 
+      // Apply min/max constraints
+      childWidth = this.clampSize(childWidth, child.minWidth, child.maxWidth, contentWidth);
+      childHeight = this.clampSize(childHeight, child.minHeight, child.maxHeight, contentHeight);
+
       let childX: number;
       let childY: number;
 
@@ -351,6 +365,12 @@ class Template extends EventEmitter {
         this.calculateChildrenPositions(child);
       }
     }
+  }
+
+  private clampSize(value: number, min: Size | undefined, max: Size | undefined, parentSize: number): number {
+    if (min) value = Math.max(value, this.resolveChildSize(min, parentSize));
+    if (max) value = Math.min(value, this.resolveChildSize(max, parentSize));
+    return value;
   }
 
   private resolveChildSize(size: { value: number; unit: string }, parentSize: number): number {

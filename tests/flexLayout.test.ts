@@ -536,6 +536,194 @@ describe("Auto-height", () => {
   });
 });
 
+describe("Min/Max dimension constraints", () => {
+  let template: Template;
+
+  beforeEach(() => {
+    setTerminalDimensions({ getWidth: () => 100, getHeight: () => 50 });
+    template = new Template();
+  });
+
+  it("should clamp width up to minWidth", () => {
+    const child = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 10,
+      height: 5,
+      minWidth: 20,
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child.absolutePosition!.width).toBe(20);
+  });
+
+  it("should clamp width down to maxWidth", () => {
+    const child = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 50,
+      height: 5,
+      maxWidth: 30,
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 60,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child.absolutePosition!.width).toBe(30);
+  });
+
+  it("should support percentage min/max", () => {
+    const child = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 10,
+      height: 5,
+      minWidth: "50%",
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 100,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child.absolutePosition!.width).toBe(50);
+  });
+
+  it("should clamp flex children to minWidth", () => {
+    const child1 = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 5,
+      margin: 0,
+      flex: 1,
+      minWidth: 25,
+    });
+
+    const child2 = new MockComponent({
+      id: "c2",
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 5,
+      margin: 0,
+      flex: 1,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // flex would give 20 each, but c1 has min 25
+    expect(child1.absolutePosition!.width).toBe(25);
+  });
+
+  it("should clamp flex children to maxWidth", () => {
+    const child = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 5,
+      margin: 0,
+      flex: 1,
+      maxWidth: 15,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 10,
+      margin: 0,
+      layout: "row",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // flex would give 40, but max is 15
+    expect(child.absolutePosition!.width).toBe(15);
+  });
+
+  it("should clamp height with minHeight and maxHeight", () => {
+    const child1 = new MockComponent({
+      id: "c1",
+      position: { x: 0, y: 0 },
+      width: 20,
+      height: 2,
+      minHeight: 5,
+      margin: 0,
+    });
+
+    const child2 = new MockComponent({
+      id: "c2",
+      position: { x: 0, y: 0 },
+      width: 20,
+      height: 15,
+      maxHeight: 8,
+      margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent",
+      position: { x: 0, y: 0 },
+      width: 40,
+      height: 30,
+      margin: 0,
+      layout: "column",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child1.absolutePosition!.height).toBe(5);
+    expect(child2.absolutePosition!.height).toBe(8);
+  });
+});
+
 describe("Flex layout with auto-height in column", () => {
   let template: Template;
 
