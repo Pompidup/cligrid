@@ -1,5 +1,14 @@
 # @pompidup/cligrid
 
+## 1.1.0
+
+### Minor Changes
+
+- **Styled segments** — new `segments` field on `RenderLine` allows multiple styles within a single line via `StyledSegment[]`. Each segment has its own `fg`, `bg`, `bold`, `dim`, `underline`. The line-level `style` acts as a base for all segments.
+- **Text alignment** — new `align` field on `RenderLine` supports `"left"` (default), `"center"`, and `"right"` alignment within the component's content area. Works with both plain text and segments.
+- **Segment-aware overflow** — `hidden`, `ellipsis`, `wrap`, and `wrap-word` overflow modes now correctly handle segments, truncating and wrapping across segment boundaries while preserving individual styles.
+- **New demo** — `pnpm demo:segments` showcases color palettes, log-level badges, text alignment, combined segments + alignment, and segment overflow with ellipsis.
+
 ## 1.0.1
 
 ### Patch Changes

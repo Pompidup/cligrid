@@ -14,7 +14,9 @@ A terminal UI framework for building responsive, interactive, component-based CL
 - **Functional components** — `createComponent()` factory, no class boilerplate needed
 - **Responsive layout** — percentage and fixed sizing, relative positioning, flex layout (row/column)
 - **Styling** — borders (single/double/rounded), colors (named + hex), padding, bold/dim/underline
-- **Text overflow** — hidden, ellipsis, wrap, wrap-word modes
+- **Styled segments** — multiple styles within a single line via `segments` (`StyledSegment[]`)
+- **Text alignment** — `align: "left" | "center" | "right"` per line
+- **Text overflow** — hidden, ellipsis, wrap, wrap-word modes (segment-aware)
 - **Keyboard input** — focus management (Tab/Shift+Tab), event bubbling, declarative `onKeyPress`
 - **Scrolling** — scrollable components with keyboard control and visual scroll indicator
 - **Overlays** — z-index layering, `showOverlay()`/`hideOverlay()` for modals
@@ -219,6 +221,47 @@ style: {
 
 **Colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, bright variants (`brightRed`, ...), and hex (`"#FF00FF"`).
 
+### Styled Segments
+
+Apply different styles to parts of the same line using `segments`:
+
+```typescript
+render: () => [
+  {
+    text: "",
+    segments: [
+      { text: " INFO ", style: { bg: "blue", fg: "white", bold: true } },
+      { text: " Server started on ", style: { fg: "white" } },
+      { text: ":3000", style: { fg: "cyan", bold: true } },
+    ],
+  },
+]
+```
+
+When `segments` is provided, each segment gets its own `fg`, `bg`, `bold`, `dim`, `underline`. The line-level `style` acts as a base for all segments. The `text` field is ignored when `segments` is present.
+
+### Text Alignment
+
+Align text within a component's content area:
+
+```typescript
+render: () => [
+  { text: "Left-aligned (default)" },
+  { text: "Centered title", align: "center" },
+  { text: "Right-aligned value", align: "right" },
+  // Segments + alignment
+  {
+    text: "",
+    align: "center",
+    segments: [
+      { text: " OK ", style: { bg: "green", fg: "black" } },
+      { text: "  " },
+      { text: " ERR ", style: { bg: "red", fg: "white" } },
+    ],
+  },
+]
+```
+
 ## Interactivity
 
 ### Focus Management
@@ -325,14 +368,14 @@ comp.on("resize", (width, height) => { /* dimensions changed */ });
 
 ## Demos
 
-The package includes 4 runnable demos showcasing the library features:
+The package includes 5 runnable demos showcasing the library features:
 
 ```sh
-# From libs/cligrid/
 pnpm demo:dashboard    # Interactive dashboard with navigation menu
 pnpm demo:form         # Form with input fields, select list, focus management
 pnpm demo:advanced     # State store, scrolling, overlays, live updates
 pnpm demo:castle       # ASCII art castle with lightning animation
+pnpm demo:segments     # Styled segments, text alignment, segment overflow
 ```
 
 ## API Reference
@@ -368,7 +411,7 @@ pnpm demo:castle       # ASCII art castle with lightning animation
 
 ### Types
 
-`Style`, `ComponentConfig`, `RenderContext`, `RenderOutput`, `RenderLine`, `Position`, `Size`, `KeyEvent`, `TerminalDimensions`, `StyleAttrs`
+`Style`, `ComponentConfig`, `RenderContext`, `RenderOutput`, `RenderLine`, `StyledSegment`, `TextAlign`, `Position`, `Size`, `KeyEvent`, `TerminalDimensions`, `StyleAttrs`
 
 ## License
 
