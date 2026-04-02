@@ -309,15 +309,12 @@ class Template extends EventEmitter {
 
     const remainingSpace = Math.max(0, totalSpace - fixedSpace);
 
-    // Second pass: assign positions
-    let cursor = 0;
-
+    // Second pass: resolve final sizes
+    const resolvedSizes: { width: number; height: number }[] = [];
     for (let i = 0; i < parent.children.length; i++) {
       const child = parent.children[i]!;
-      const margin = child.margin;
       let { width: childWidth, height: childHeight } = childSizes[i]!;
 
-      // Resolve flex size
       if (child.flex !== undefined && child.flex > 0 && totalFlex > 0) {
         const flexSize = Math.floor((child.flex / totalFlex) * remainingSpace);
         if (isRow) {
@@ -327,26 +324,76 @@ class Template extends EventEmitter {
         }
       }
 
-      // Apply min/max constraints
       childWidth = this.clampSize(childWidth, child.minWidth, child.maxWidth, contentWidth);
       childHeight = this.clampSize(childHeight, child.minHeight, child.maxHeight, contentHeight);
+
+      // Apply alignItems stretch on cross axis
+      if (parent.alignItems === "stretch") {
+        if (isRow) {
+          childHeight = contentHeight - child.margin * 2;
+        } else {
+          childWidth = contentWidth - child.margin * 2;
+        }
+      }
+
+      resolvedSizes.push({ width: childWidth, height: childHeight });
+    }
+
+    // Compute total consumed main-axis space for justify
+    let totalConsumed = 0;
+    for (let i = 0; i < parent.children.length; i++) {
+      const child = parent.children[i]!;
+      const mainSize = isRow ? resolvedSizes[i]!.width : resolvedSizes[i]!.height;
+      totalConsumed += mainSize + child.margin * 2;
+    }
+    totalConsumed += totalGap;
+
+    const freeSpace = Math.max(0, totalSpace - totalConsumed);
+    const childCount = parent.children.length;
+    const justify = parent.justifyContent;
+
+    // Calculate justify offsets
+    let justifyStart = 0;
+    let justifyGap = 0;
+    if (justify === "center") {
+      justifyStart = Math.floor(freeSpace / 2);
+    } else if (justify === "end") {
+      justifyStart = freeSpace;
+    } else if (justify === "space-between" && childCount > 1) {
+      justifyGap = freeSpace / (childCount - 1);
+    } else if (justify === "space-around" && childCount > 0) {
+      justifyGap = freeSpace / childCount;
+      justifyStart = Math.floor(justifyGap / 2);
+    }
+
+    // Third pass: assign positions
+    let cursor = justifyStart;
+    const crossSpace = isRow ? contentHeight : contentWidth;
+    const align = parent.alignItems;
+
+    for (let i = 0; i < parent.children.length; i++) {
+      const child = parent.children[i]!;
+      const margin = child.margin;
+      const { width: childWidth, height: childHeight } = resolvedSizes[i]!;
 
       let childX: number;
       let childY: number;
 
       if (isRow) {
         childX = contentX + cursor + margin;
-        childY = contentY + margin;
+        const crossSize = childHeight;
+        childY = contentY + this.alignOnCross(align, crossSize, crossSpace, margin);
         cursor += childWidth + margin * 2;
       } else {
-        childX = contentX + margin;
+        const crossSize = childWidth;
+        childX = contentX + this.alignOnCross(align, crossSize, crossSpace, margin);
         childY = contentY + cursor + margin;
         cursor += childHeight + margin * 2;
       }
 
-      // Add gap after each child except the last
+      // Add gap + justify gap after each child except the last
       if (i < parent.children.length - 1) {
-        cursor += gap;
+        cursor += gap + justifyGap;
       }
 
       // Clip to parent content area
@@ -364,6 +411,19 @@ class Template extends EventEmitter {
       if (child.children.length > 0) {
         this.calculateChildrenPositions(child);
       }
+    }
+  }
+
+  private alignOnCross(align: string, childSize: number, crossSpace: number, margin: number): number {
+    switch (align) {
+      case "center":
+        return Math.floor((crossSpace - childSize) / 2);
+      case "end":
+        return crossSpace - childSize - margin;
+      case "stretch":
+        return margin;
+      default: // "start"
+        return margin;
     }
   }
 

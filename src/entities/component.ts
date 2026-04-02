@@ -12,6 +12,9 @@ type SizeInput = Size | number | string | "auto";
 
 type LayoutDirection = "row" | "column" | "none";
 
+type JustifyContent = "start" | "center" | "end" | "space-between" | "space-around";
+type AlignItems = "start" | "center" | "end" | "stretch";
+
 type Position = {
   x: {
     position: number | "left" | "right";
@@ -74,6 +77,8 @@ type ComponentConfig<P extends Props = {}> = {
   children?: Component[];
   layout?: LayoutDirection;
   gap?: number;
+  justifyContent?: JustifyContent;
+  alignItems?: AlignItems;
   flex?: number;
   scrollable?: boolean;
   zIndex?: number;
@@ -125,6 +130,8 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   style?: Style;
   layout: LayoutDirection;
   gap: number;
+  justifyContent: JustifyContent;
+  alignItems: AlignItems;
   flex?: number;
   scrollable: boolean;
   zIndex: number;
@@ -176,6 +183,8 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.style = config.style;
       this.layout = config.layout ?? "none";
       this.gap = config.gap ?? 0;
+      this.justifyContent = config.justifyContent ?? "start";
+      this.alignItems = config.alignItems ?? "start";
       this.flex = config.flex;
       this.scrollable = config.scrollable ?? false;
       this.zIndex = config.zIndex ?? 0;
@@ -200,6 +209,8 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
       this.style = style;
       this.layout = "none";
       this.gap = 0;
+      this.justifyContent = "start";
+      this.alignItems = "start";
       this.scrollable = false;
       this.zIndex = 0;
     }
@@ -347,5 +358,5 @@ abstract class Component<P extends Props = {}> extends EventEmitter {
   }
 }
 
-export type { Size, SizeInput, Position, PositionInput, Props, AbsolutePosition, StyledSegment, TextAlign, RenderLine, RenderOutput, RenderContext, ComponentConfig, LayoutDirection };
+export type { Size, SizeInput, Position, PositionInput, Props, AbsolutePosition, StyledSegment, TextAlign, RenderLine, RenderOutput, RenderContext, ComponentConfig, LayoutDirection, JustifyContent, AlignItems };
 export { Component, parseSize, parsePosition };

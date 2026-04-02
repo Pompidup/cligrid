@@ -724,6 +724,229 @@ describe("Min/Max dimension constraints", () => {
   });
 });
 
+describe("Justify content", () => {
+  let template: Template;
+
+  beforeEach(() => {
+    setTerminalDimensions({ getWidth: () => 100, getHeight: () => 50 });
+    template = new Template();
+  });
+
+  it("should center children with justify center", () => {
+    const child1 = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+    const child2 = new MockComponent({
+      id: "c2", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", justifyContent: "center",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Free space = 40 - 20 = 20, offset = 10
+    expect(child1.absolutePosition!.x).toBe(10);
+    expect(child2.absolutePosition!.x).toBe(20);
+  });
+
+  it("should push children to end with justify end", () => {
+    const child1 = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+    const child2 = new MockComponent({
+      id: "c2", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", justifyContent: "end",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Free space = 20, offset = 20
+    expect(child1.absolutePosition!.x).toBe(20);
+    expect(child2.absolutePosition!.x).toBe(30);
+  });
+
+  it("should distribute space with justify space-between", () => {
+    const child1 = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+    const child2 = new MockComponent({
+      id: "c2", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+    const child3 = new MockComponent({
+      id: "c3", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", justifyContent: "space-between",
+      children: [child1, child2, child3],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Free space = 40 - 30 = 10, gap = 10 / 2 = 5
+    expect(child1.absolutePosition!.x).toBe(0);
+    expect(child2.absolutePosition!.x).toBe(15);
+    expect(child3.absolutePosition!.x).toBe(30);
+  });
+
+  it("should distribute space with justify space-around", () => {
+    const child1 = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+    const child2 = new MockComponent({
+      id: "c2", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", justifyContent: "space-around",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Free space = 40 - 20 = 20, gap = 20 / 2 = 10, start = 5
+    expect(child1.absolutePosition!.x).toBe(5);
+    expect(child2.absolutePosition!.x).toBe(25);
+  });
+
+  it("should work with justify center in column layout", () => {
+    const child1 = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 20, height: 5, margin: 0,
+    });
+    const child2 = new MockComponent({
+      id: "c2", position: { x: 0, y: 0 }, width: 20, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 20, margin: 0,
+      layout: "column", justifyContent: "center",
+      children: [child1, child2],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Free space = 20 - 10 = 10, offset = 5
+    expect(child1.absolutePosition!.y).toBe(5);
+    expect(child2.absolutePosition!.y).toBe(10);
+  });
+});
+
+describe("Align items", () => {
+  let template: Template;
+
+  beforeEach(() => {
+    setTerminalDimensions({ getWidth: () => 100, getHeight: () => 50 });
+    template = new Template();
+  });
+
+  it("should center children on cross axis with alignItems center", () => {
+    const child = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 4, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", alignItems: "center",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Cross space = 10, child height = 4, offset = floor((10-4)/2) = 3
+    expect(child.absolutePosition!.y).toBe(3);
+  });
+
+  it("should align children to end on cross axis", () => {
+    const child = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 4, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", alignItems: "end",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Cross space = 10, child height = 4, offset = 10 - 4 - 0 = 6
+    expect(child.absolutePosition!.y).toBe(6);
+  });
+
+  it("should stretch children on cross axis", () => {
+    const child = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 4, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", alignItems: "stretch",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    expect(child.absolutePosition!.height).toBe(10);
+    expect(child.absolutePosition!.y).toBe(0);
+  });
+
+  it("should center children on cross axis in column layout", () => {
+    const child = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 5, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 20, margin: 0,
+      layout: "column", alignItems: "center",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Cross space = 40, child width = 10, offset = floor((40-10)/2) = 15
+    expect(child.absolutePosition!.x).toBe(15);
+  });
+
+  it("should combine justify center and alignItems center", () => {
+    const child = new MockComponent({
+      id: "c1", position: { x: 0, y: 0 }, width: 10, height: 4, margin: 0,
+    });
+
+    const parent = new MockComponent({
+      id: "parent", position: { x: 0, y: 0 }, width: 40, height: 10, margin: 0,
+      layout: "row", justifyContent: "center", alignItems: "center",
+      children: [child],
+    });
+
+    template.addComponent(parent);
+    template.updateLayout(100, 50);
+
+    // Main: free=30, start=15. Cross: (10-4)/2=3
+    expect(child.absolutePosition!.x).toBe(15);
+    expect(child.absolutePosition!.y).toBe(3);
+  });
+});
+
 describe("Flex layout with auto-height in column", () => {
   let template: Template;
 
