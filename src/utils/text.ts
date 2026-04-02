@@ -176,7 +176,7 @@ function sameStyle(
   if (a === b) return true;
   if (!a && !b) return true;
   if (!a || !b) return false;
-  return a.fg === b.fg && a.bg === b.bg && a.bold === b.bold && a.dim === b.dim && a.underline === b.underline;
+  return a.fg === b.fg && a.bg === b.bg && a.bold === b.bold && a.dim === b.dim && a.underline === b.underline && a.italic === b.italic && a.strikethrough === b.strikethrough && a.inverse === b.inverse;
 }
 
 function wrapSegmentsCharacter(lines: SegmentLine[], width: number): SegmentLine[] {

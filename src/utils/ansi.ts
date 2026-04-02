@@ -44,6 +44,9 @@ type StyleAttrs = {
   bold?: boolean;
   dim?: boolean;
   underline?: boolean;
+  italic?: boolean;
+  strikethrough?: boolean;
+  inverse?: boolean;
 };
 
 function stylize(text: string, style: StyleAttrs): string {
@@ -51,7 +54,10 @@ function stylize(text: string, style: StyleAttrs): string {
 
   if (style.bold) prefix += "\x1b[1m";
   if (style.dim) prefix += "\x1b[2m";
+  if (style.italic) prefix += "\x1b[3m";
   if (style.underline) prefix += "\x1b[4m";
+  if (style.inverse) prefix += "\x1b[7m";
+  if (style.strikethrough) prefix += "\x1b[9m";
   if (style.fg) prefix += fgCode(style.fg);
   if (style.bg) prefix += bgCode(style.bg);
 

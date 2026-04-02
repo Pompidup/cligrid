@@ -60,9 +60,29 @@ describe("ANSI utilities", () => {
       expect(result).toBe("\x1b[44mhello\x1b[0m");
     });
 
+    it("should apply italic", () => {
+      const result = stylize("hello", { italic: true });
+      expect(result).toBe("\x1b[3mhello\x1b[0m");
+    });
+
+    it("should apply strikethrough", () => {
+      const result = stylize("hello", { strikethrough: true });
+      expect(result).toBe("\x1b[9mhello\x1b[0m");
+    });
+
+    it("should apply inverse", () => {
+      const result = stylize("hello", { inverse: true });
+      expect(result).toBe("\x1b[7mhello\x1b[0m");
+    });
+
     it("should combine multiple styles", () => {
       const result = stylize("hello", { bold: true, fg: "green", bg: "#ff0000" });
       expect(result).toBe("\x1b[1m\x1b[32m\x1b[48;2;255;0;0mhello\x1b[0m");
+    });
+
+    it("should combine all style attributes", () => {
+      const result = stylize("hello", { bold: true, italic: true, strikethrough: true, inverse: true });
+      expect(result).toBe("\x1b[1m\x1b[3m\x1b[7m\x1b[9mhello\x1b[0m");
     });
   });
 });

@@ -109,8 +109,8 @@ describe("ScreenBuffer", () => {
     const changes = other.diff(buffer);
 
     expect(changes).toHaveLength(2);
-    expect(changes[0]).toEqual({ x: 0, y: 0, cell: { char: "H", fg: undefined, bg: undefined, bold: undefined, dim: undefined, underline: undefined } });
-    expect(changes[1]).toEqual({ x: 1, y: 0, cell: { char: "i", fg: undefined, bg: undefined, bold: undefined, dim: undefined, underline: undefined } });
+    expect(changes[0]).toEqual({ x: 0, y: 0, cell: { char: "H", fg: undefined, bg: undefined, bold: undefined, dim: undefined, underline: undefined, italic: undefined, strikethrough: undefined, inverse: undefined } });
+    expect(changes[1]).toEqual({ x: 1, y: 0, cell: { char: "i", fg: undefined, bg: undefined, bold: undefined, dim: undefined, underline: undefined, italic: undefined, strikethrough: undefined, inverse: undefined } });
   });
 
   it("should return empty diff for identical buffers", () => {

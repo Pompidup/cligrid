@@ -107,7 +107,7 @@ class Renderer {
         output += `\x1b[${change.y + 1};${change.x + 1}H`;
       }
       const { cell } = change;
-      const hasStyle = cell.fg || cell.bg || cell.bold || cell.dim || cell.underline;
+      const hasStyle = cell.fg || cell.bg || cell.bold || cell.dim || cell.underline || cell.italic || cell.strikethrough || cell.inverse;
       output += hasStyle ? stylize(cell.char, cell) : cell.char;
       lastX = change.x;
       lastY = change.y;
@@ -207,7 +207,7 @@ class Renderer {
       terminalHeight: this.terminalHeight,
     };
     const output = component.render(context);
-    const baseStyle = style ? { fg: style.fg, bg: style.bg, bold: style.bold, dim: style.dim, underline: style.underline } : undefined;
+    const baseStyle = style ? { fg: style.fg, bg: style.bg, bold: style.bold, dim: style.dim, underline: style.underline, italic: style.italic, strikethrough: style.strikethrough, inverse: style.inverse } : undefined;
 
     const renderLines = this.normalizeRenderOutput(output);
     const overflowMode = style?.overflow ?? "hidden";

@@ -5,6 +5,9 @@ type Cell = {
   bold?: boolean;
   dim?: boolean;
   underline?: boolean;
+  italic?: boolean;
+  strikethrough?: boolean;
+  inverse?: boolean;
 };
 
 const EMPTY_CELL: Cell = { char: " " };
@@ -56,6 +59,9 @@ class ScreenBuffer {
         bold: style?.bold,
         dim: style?.dim,
         underline: style?.underline,
+        italic: style?.italic,
+        strikethrough: style?.strikethrough,
+        inverse: style?.inverse,
       };
     }
   }
@@ -101,7 +107,10 @@ class ScreenBuffer {
           a.bg !== b.bg ||
           a.bold !== b.bold ||
           a.dim !== b.dim ||
-          a.underline !== b.underline
+          a.underline !== b.underline ||
+          a.italic !== b.italic ||
+          a.strikethrough !== b.strikethrough ||
+          a.inverse !== b.inverse
         ) {
           changes.push({ x, y, cell: { ...a } });
         }

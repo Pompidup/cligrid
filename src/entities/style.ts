@@ -22,6 +22,9 @@ type Style = {
   bold?: boolean;
   dim?: boolean;
   underline?: boolean;
+  italic?: boolean;
+  strikethrough?: boolean;
+  inverse?: boolean;
   overflow?: OverflowMode;
 };
 
