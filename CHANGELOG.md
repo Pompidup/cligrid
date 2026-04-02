@@ -1,5 +1,54 @@
 # @pompidup/cligrid
 
+## 2.0.0
+
+### Major Changes
+
+Major release with new components, input paradigms, theming, and animation.
+
+#### New Components
+- **Table** — data table with column alignment (left/center/right), bold/underline headers, separators, and vertical scroll support
+- **Spinner** — animated loading indicator with 4 styles: `dots`, `line`, `arc`, `bouncingBar`. Auto-advances frames on mount
+- **Tabs** — tab navigation with Left/Right keyboard control, `onTabChange` callback, wrap-around navigation
+- **Modal** — dialog with title, body, navigable buttons (Left/Right/Enter/Escape), designed for `app.showOverlay()`
+- **Checkbox** — toggle input with `[✓]/[ ]` rendering, Space/Enter to toggle, `onChange` callback
+
+#### Animation System
+- Built-in `Animator` with `app.animate(component, propsTarget, options)` for property animation
+- `app.tick(callback)` for frame-based callbacks
+- 6 easing functions: `linear`, `easeIn`, `easeOut`, `easeInOut`, `bounce`, `elastic`
+- Batch rendering with dirty-component accumulation per frame
+
+#### Mouse Support
+- Enable with `new App({ mouse: true })`
+- SGR mouse protocol parsing (click, release, move, scroll)
+- Hit-testing via component `absolutePosition`
+- Events: `click`, `mousedown`, `mouseup`, `mousemove`, `scroll` on target components
+- Hover detection: `mouseenter`/`mouseleave` events, `hovered` property on components
+- `hovered: boolean` in `RenderContext` for hover-aware rendering
+
+#### Theme System
+- Design tokens: `primary`, `secondary`, `danger`, `success`, `warning`, `surface`, `text`, `border`, `muted`, `accent`
+- Built-in `darkTheme` and `lightTheme` presets
+- `app.setTheme(theme)` / `app.getTheme()` for runtime theme switching
+- Token resolution in renderer — use `fg: "primary"` instead of hardcoded colors
+
+#### Layout Enhancements
+- **Gap** — `gap` property for flex layout spacing between children
+- **Min/Max dimensions** — `minWidth`, `maxWidth`, `minHeight`, `maxHeight` constraints
+- **Justify content** — `justifyContent: "start" | "center" | "end" | "space-between" | "space-around"`
+- **Align items** — `alignItems: "start" | "center" | "end" | "stretch"`
+
+#### Styling Enhancements
+- **Italic, strikethrough, inverse** text styles
+- **Unicode width-aware rendering** — correct layout for emoji, CJK characters, zero-width joiners
+- **Focus visible** — `focusStyle` on components for automatic visual focus indicators
+- **Color utilities** — `gradient()`, `lighten()`, `darken()`, `mix()` for programmatic color manipulation
+- **Horizontal scrolling** — `scrollToX()`, `scrollByX()`, Left/Right keyboard control, visual indicator
+
+#### Other
+- v2 showcase demo (`pnpm demo:showcase`) combining all new features
+
 ## 1.1.0
 
 ### Minor Changes

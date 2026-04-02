@@ -10,17 +10,24 @@ A terminal UI framework for building responsive, interactive, component-based CL
 ## Features
 
 - **Component-based architecture** — build UIs with reusable, composable components
-- **Built-in components** — TextBox, SelectList, ProgressBar, InputField ready to use
+- **Built-in components** — TextBox, SelectList, ProgressBar, InputField, Table, Spinner, Tabs, Modal, Checkbox
 - **Functional components** — `createComponent()` factory, no class boilerplate needed
-- **Responsive layout** — percentage and fixed sizing, relative positioning, flex layout (row/column)
-- **Styling** — borders (single/double/rounded), colors (named + hex), padding, bold/dim/underline
+- **Responsive layout** — percentage and fixed sizing, relative positioning, flex layout (row/column) with gap, justify, alignItems
+- **Min/Max constraints** — `minWidth`, `maxWidth`, `minHeight`, `maxHeight` for responsive layouts
+- **Styling** — borders (single/double/rounded), colors (named + hex), padding, bold/dim/underline/italic/strikethrough/inverse
 - **Styled segments** — multiple styles within a single line via `segments` (`StyledSegment[]`)
 - **Text alignment** — `align: "left" | "center" | "right"` per line
 - **Text overflow** — hidden, ellipsis, wrap, wrap-word modes (segment-aware)
+- **Unicode-aware** — correct rendering of emoji, CJK characters, and zero-width joiners
 - **Keyboard input** — focus management (Tab/Shift+Tab), event bubbling, declarative `onKeyPress`
-- **Scrolling** — scrollable components with keyboard control and visual scroll indicator
+- **Mouse support** — click, scroll, hover detection with `mouseenter`/`mouseleave` events
+- **Scrolling** — vertical and horizontal scrolling with keyboard control and visual indicators
 - **Overlays** — z-index layering, `showOverlay()`/`hideOverlay()` for modals
 - **Reactive state** — app-level state store with `setState()`/`connect()` for automatic re-renders
+- **Animation system** — built-in `app.animate()` with easing functions (linear, easeIn, easeOut, bounce, elastic)
+- **Color utilities** — `gradient()`, `lighten()`, `darken()`, `mix()` for programmatic color manipulation
+- **Theme system** — design tokens (`primary`, `danger`, `surface`, etc.) with dark/light presets
+- **Focus visible** — `focusStyle` for automatic visual focus indicators
 - **Lifecycle hooks** — `onMount`, `onDestroy`, `onResize`
 - **Performance** — double-buffered rendering, diff-based updates, partial re-renders on prop changes
 
@@ -145,6 +152,117 @@ const input = new InputField({
 });
 ```
 
+### Table
+
+Data table with column alignment, headers, and vertical scrolling.
+
+```typescript
+import { Table } from "@pompidup/cligrid";
+
+const table = new Table({
+  id: "users",
+  position: { x: 0, y: 0 },
+  width: 60,
+  height: 10,
+  scrollable: true,
+  props: {
+    columns: [
+      { key: "name", label: "Name", width: 20 },
+      { key: "role", label: "Role", width: 15 },
+      { key: "status", label: "Status", width: 10, align: "right" },
+    ],
+    rows: [
+      { name: "Alice", role: "Admin", status: "Active" },
+      { name: "Bob", role: "User", status: "Idle" },
+    ],
+  },
+  style: { border: { style: "single" } },
+});
+```
+
+### Spinner
+
+Animated loading indicator with multiple styles.
+
+```typescript
+import { Spinner } from "@pompidup/cligrid";
+
+const spinner = new Spinner({
+  id: "loader",
+  position: { x: 0, y: 0 },
+  width: 30,
+  height: 1,
+  props: { label: "Loading...", style: "dots" },
+  // Styles: "dots" | "line" | "arc" | "bouncingBar"
+});
+```
+
+### Tabs
+
+Tab navigation with Left/Right keyboard control.
+
+```typescript
+import { Tabs } from "@pompidup/cligrid";
+
+const tabs = new Tabs({
+  id: "nav",
+  position: { x: 0, y: 0 },
+  width: 40,
+  height: 1,
+  props: {
+    tabs: [
+      { label: "Home", id: "home" },
+      { label: "Settings", id: "settings" },
+    ],
+    activeTab: "home",
+  },
+  onTabChange: (id) => { /* switch content */ },
+});
+```
+
+### Modal
+
+Dialog with title, body, navigable buttons, and overlay support.
+
+```typescript
+import { Modal } from "@pompidup/cligrid";
+
+const modal = new Modal({
+  id: "confirm",
+  position: { x: 10, y: 5 },
+  width: 40,
+  height: 10,
+  style: { border: { style: "double" } },
+  props: {
+    title: "Confirm",
+    body: "Are you sure?",
+    buttons: [
+      { label: "OK", action: () => app.hideOverlay(modal) },
+      { label: "Cancel", action: () => app.hideOverlay(modal) },
+    ],
+  },
+});
+
+app.showOverlay(modal); // z-index 100, focus trap
+```
+
+### Checkbox
+
+Toggle input with Space/Enter keyboard control.
+
+```typescript
+import { Checkbox } from "@pompidup/cligrid";
+
+const checkbox = new Checkbox({
+  id: "agree",
+  position: { x: 0, y: 0 },
+  width: 30,
+  height: 1,
+  props: { checked: false, label: "I agree to the terms" },
+  onChange: (checked) => { /* handle toggle */ },
+});
+```
+
 ## Layout & Positioning
 
 ### Fixed and Percentage Sizing
@@ -153,6 +271,15 @@ const input = new InputField({
 width: 30,          // 30 columns
 width: "50%",       // 50% of terminal width
 height: "auto",     // computed from content
+```
+
+### Min/Max Constraints
+
+```typescript
+minWidth: 20,       // minimum 20 columns
+maxWidth: "80%",    // maximum 80% of terminal width
+minHeight: 5,
+maxHeight: 30,
 ```
 
 ### Relative Positioning
@@ -193,6 +320,9 @@ const row = createComponent({
   width: "100%",
   height: 10,
   layout: "row",
+  gap: 1,
+  justifyContent: "space-between", // "start" | "center" | "end" | "space-between" | "space-around"
+  alignItems: "center",            // "start" | "center" | "end" | "stretch"
   children: [
     createComponent({ id: "a", width: 20, height: "auto", /* ... */ }),
     createComponent({ id: "b", width: "100%", height: "auto", flex: 1, /* ... */ }),
@@ -209,17 +339,20 @@ style: {
     style: "single" | "double" | "rounded" | "none",
     fg: "cyan",        // border color
   },
-  fg: "white",         // text foreground (named or "#RRGGBB")
+  fg: "white",         // text foreground (named, "#RRGGBB", or theme token)
   bg: "blue",          // text background
   bold: true,
   dim: true,
   underline: true,
+  italic: true,
+  strikethrough: true,
+  inverse: true,
   padding: { top: 1, right: 2, bottom: 1, left: 2 },
   overflow: "hidden" | "ellipsis" | "wrap" | "wrap-word",
 }
 ```
 
-**Colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, bright variants (`brightRed`, ...), and hex (`"#FF00FF"`).
+**Colors**: `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, bright variants (`brightRed`, ...), hex (`"#FF00FF"`), and theme tokens (`"primary"`, `"danger"`, etc.).
 
 ### Styled Segments
 
@@ -238,8 +371,6 @@ render: () => [
 ]
 ```
 
-When `segments` is provided, each segment gets its own `fg`, `bg`, `bold`, `dim`, `underline`. The line-level `style` acts as a base for all segments. The `text` field is ignored when `segments` is present.
-
 ### Text Alignment
 
 Align text within a component's content area:
@@ -249,16 +380,6 @@ render: () => [
   { text: "Left-aligned (default)" },
   { text: "Centered title", align: "center" },
   { text: "Right-aligned value", align: "right" },
-  // Segments + alignment
-  {
-    text: "",
-    align: "center",
-    segments: [
-      { text: " OK ", style: { bg: "green", fg: "black" } },
-      { text: "  " },
-      { text: " ERR ", style: { bg: "red", fg: "white" } },
-    ],
-  },
 ]
 ```
 
@@ -272,6 +393,16 @@ Register focusable components and navigate with Tab/Shift+Tab:
 app.add(input1, true);   // true = focusable
 app.add(input2, true);
 app.add(label, false);   // not focusable (default)
+```
+
+Use `focusStyle` for automatic visual focus indicators:
+
+```typescript
+const comp = createComponent({
+  id: "panel",
+  focusStyle: { fg: "yellow", bold: true }, // applied when focused
+  // ...
+});
 ```
 
 ### Keyboard Events
@@ -299,7 +430,79 @@ const comp = createComponent({
 
 Events bubble up from child to parent until `event.handled = true`.
 
+### Mouse Support
+
+Enable mouse tracking for click, scroll, and hover events:
+
+```typescript
+const app = new App({ mouse: true });
+
+const button = createComponent({
+  id: "btn",
+  // ...
+});
+
+button.on("click", (event) => { /* { x, y, button, type } */ });
+button.on("mouseenter", () => { /* hover start */ });
+button.on("mouseleave", () => { /* hover end */ });
+button.on("scroll", (event) => { /* { direction: -1 | 1 } */ });
+```
+
+Components receive `hovered: boolean` in `RenderContext` to adapt their rendering.
+
 ## Advanced Features
+
+### Animation System
+
+Animate component props with easing functions:
+
+```typescript
+import { easeOut, bounce } from "@pompidup/cligrid";
+
+app.animate(progressBar, { value: 1.0 }, {
+  duration: 2000,
+  easing: easeOut,
+  onComplete: () => { /* done */ },
+});
+
+// Frame-based callbacks
+const unsubscribe = app.tick((dt) => { /* called each frame */ });
+```
+
+Available easings: `linear`, `easeIn`, `easeOut`, `easeInOut`, `bounce`, `elastic`.
+
+### Color Utilities
+
+```typescript
+import { gradient, lighten, darken, mix } from "@pompidup/cligrid";
+
+const colors = gradient("#FF0000", "#0000FF", 10); // 10-step gradient
+const lighter = lighten("#333333", 0.3);
+const darker = darken("#CCCCCC", 0.2);
+const blended = mix("#FF0000", "#00FF00", 0.5);
+```
+
+### Theme System
+
+Use design tokens for consistent styling across components:
+
+```typescript
+import { darkTheme, lightTheme } from "@pompidup/cligrid";
+
+app.setTheme(darkTheme);
+
+// Use token names as colors
+const comp = createComponent({
+  id: "panel",
+  style: { fg: "primary", bg: "surface", border: { style: "single", fg: "border" } },
+  // ...
+});
+
+// Switch theme at runtime
+app.setTheme(lightTheme);
+```
+
+Tokens: `primary`, `secondary`, `danger`, `success`, `warning`, `surface`, `text`, `border`, `muted`, `accent`.
 
 ### Reactive State Store
 
@@ -322,33 +525,27 @@ app.setState({ score: 42 });
 
 ### Scrolling
 
+Vertical and horizontal scrolling with keyboard and mouse support:
+
 ```typescript
 const list = createComponent({
   id: "log",
-  scrollable: true, // enables Up/Down keyboard scrolling when focused
+  scrollable: true, // Up/Down for vertical, Left/Right for horizontal
   // ...
 });
 
 app.add(list, true); // focusable for keyboard control
 
 // Programmatic scrolling
-list.scrollTo(10);
-list.scrollBy(5);
+list.scrollTo(10);     list.scrollBy(5);      // vertical
+list.scrollToX(10);    list.scrollByX(5);     // horizontal
 ```
 
-A visual scroll indicator (track + thumb) appears when content overflows.
+Visual scroll indicators (track + thumb) appear when content overflows.
 
 ### Overlays
 
 ```typescript
-const modal = createComponent({
-  id: "modal",
-  position: { x: 10, y: 5 },
-  width: 40,
-  height: 10,
-  // ...
-});
-
 app.showOverlay(modal);   // z-index 100, saves previous focus
 app.hideOverlay(modal);   // restores focus
 ```
@@ -368,7 +565,7 @@ comp.on("resize", (width, height) => { /* dimensions changed */ });
 
 ## Demos
 
-The package includes 5 runnable demos showcasing the library features:
+The package includes 6 runnable demos showcasing the library features:
 
 ```sh
 pnpm demo:dashboard    # Interactive dashboard with navigation menu
@@ -376,6 +573,7 @@ pnpm demo:form         # Form with input fields, select list, focus management
 pnpm demo:advanced     # State store, scrolling, overlays, live updates
 pnpm demo:castle       # ASCII art castle with lightning animation
 pnpm demo:segments     # Styled segments, text alignment, segment overflow
+pnpm demo:showcase     # v2 showcase: Table, Tabs, Spinner, Modal, Checkbox, themes, mouse
 ```
 
 ## API Reference
@@ -384,7 +582,7 @@ pnpm demo:segments     # Styled segments, text alignment, segment overflow
 
 | Export | Description |
 |--------|-------------|
-| `App` | Main application orchestrator (manages rendering, input, focus, state) |
+| `App` | Main application orchestrator (manages rendering, input, focus, state, themes, mouse) |
 | `createComponent()` | Functional component factory |
 | `Component` | Base class for custom components |
 | `Template` | Layout manager |
@@ -398,6 +596,20 @@ pnpm demo:segments     # Styled segments, text alignment, segment overflow
 | `SelectList` | Navigable list with selection |
 | `ProgressBar` | Horizontal progress indicator |
 | `InputField` | Text input with cursor |
+| `Table` | Data table with column alignment and scroll |
+| `Spinner` | Animated loading indicator |
+| `Tabs` | Tab navigation with keyboard control |
+| `Modal` | Dialog with buttons and overlay support |
+| `Checkbox` | Toggle input |
+
+### Animation & Color
+
+| Export | Description |
+|--------|-------------|
+| `Animator` | Animation engine |
+| `linear`, `easeIn`, `easeOut`, `easeInOut`, `bounce`, `elastic` | Easing functions |
+| `gradient()`, `lighten()`, `darken()`, `mix()` | Color manipulation |
+| `darkTheme`, `lightTheme`, `resolveThemeColor()` | Theme system |
 
 ### Utilities
 
@@ -405,13 +617,14 @@ pnpm demo:segments     # Styled segments, text alignment, segment overflow
 |--------|-------------|
 | `stylize()` | Apply ANSI styles to text |
 | `fgCode()` / `bgCode()` | Get ANSI color codes |
-| `InputManager` | Low-level keyboard input |
+| `stringWidth()` | Unicode-aware string width |
+| `InputManager` | Low-level keyboard and mouse input |
 | `FocusManager` | Focus navigation |
 | `ScreenBuffer` | Double-buffered screen |
 
 ### Types
 
-`Style`, `ComponentConfig`, `RenderContext`, `RenderOutput`, `RenderLine`, `StyledSegment`, `TextAlign`, `Position`, `Size`, `KeyEvent`, `TerminalDimensions`, `StyleAttrs`
+`Style`, `ComponentConfig`, `RenderContext`, `RenderOutput`, `RenderLine`, `StyledSegment`, `TextAlign`, `Position`, `Size`, `KeyEvent`, `MouseEvent`, `Theme`, `TerminalDimensions`, `StyleAttrs`
 
 ## License
 
