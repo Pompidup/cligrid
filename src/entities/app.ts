@@ -3,6 +3,7 @@ import type { KeyEvent, MouseEvent } from "./inputManager.js";
 import type { TerminalDimensions } from "../port/terminalDimensions.js";
 import type { EasingFn } from "../utils/easing.js";
 import type { AnimationId } from "./animator.js";
+import type { Theme } from "./theme.js";
 import { Template } from "./template.js";
 import { Renderer } from "./renderer.js";
 import { InputManager } from "./inputManager.js";
@@ -63,6 +64,11 @@ class App {
 
       // Then dispatch to focus manager
       this.focusManager.handleKeyEvent(event);
+    });
+
+    // Sync focused component ID to renderer
+    this.focusManager.on("focusChanged", (comp: Component) => {
+      this.renderer.setFocusedId(comp.id);
     });
 
     this.inputManager.on("mouse", (event: MouseEvent) => {
@@ -160,6 +166,18 @@ class App {
 
   get hoveredComponent(): Component | null {
     return this._hoveredComponent;
+  }
+
+  setTheme(theme: Theme | null): this {
+    this.renderer.setTheme(theme);
+    if (this.running) {
+      this.renderer.render();
+    }
+    return this;
+  }
+
+  getTheme(): Theme | null {
+    return this.renderer.theme;
   }
 
   showOverlay(component: Component, focusable = true): this {

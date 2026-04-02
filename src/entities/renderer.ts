@@ -1,12 +1,14 @@
 import type { TerminalDimensions } from "../port/terminalDimensions.js";
 import type { Template } from "./template.js";
 import type { Component, RenderOutput, RenderLine, RenderContext } from "./component.js";
+import type { Theme } from "./theme.js";
 import { ScreenBuffer } from "./screenBuffer.js";
 import { BORDER_CHARS, getBoxInsets } from "./style.js";
 import { stylize } from "../utils/ansi.js";
 import { applySegmentOverflow, segmentsWidth } from "../utils/text.js";
 import { stringWidth } from "../utils/stringWidth.js";
 import type { SegmentLine } from "../utils/text.js";
+import { resolveThemeColor } from "./theme.js";
 import { getTerminalDimensions } from "./../../config/terminalDimensionsFactory.js";
 
 class Renderer {
@@ -18,6 +20,8 @@ class Renderer {
     new Map();
   private frontBuffer: ScreenBuffer;
   private backBuffer: ScreenBuffer;
+  private _theme: Theme | null = null;
+  private _focusedId: string | null = null;
 
   constructor(
     template: Template,
@@ -80,6 +84,18 @@ class Renderer {
     this.frontBuffer.clear();
     this.backBuffer.clear();
     console.clear();
+  }
+
+  setTheme(theme: Theme | null): void {
+    this._theme = theme;
+  }
+
+  get theme(): Theme | null {
+    return this._theme;
+  }
+
+  setFocusedId(id: string | null): void {
+    this._focusedId = id;
   }
 
   destroy(): void {
@@ -166,18 +182,30 @@ class Renderer {
     }
   }
 
+  private resolveColor(color: string | undefined): string | undefined {
+    return resolveThemeColor(color, this._theme);
+  }
+
   private drawComponentToBuffer(component: Component): void {
     if (!component.absolutePosition) {
       return;
     }
     const { x, y, width, height } = component.absolutePosition;
-    const style = component.style;
+    const isFocused = this._focusedId !== null && component.id === this._focusedId;
+
+    // Merge focusStyle when focused
+    let style = component.style;
+    if (isFocused && component.focusStyle) {
+      style = { ...style, ...component.focusStyle };
+    }
+
     const insets = getBoxInsets(style);
 
     // Draw border if configured
     if (style?.border && style.border.style !== "none") {
       const chars = BORDER_CHARS[style.border.style];
-      const borderStyle = style.border.fg ? { fg: style.border.fg } : undefined;
+      const borderFg = this.resolveColor(style.border.fg);
+      const borderStyle = borderFg ? { fg: borderFg } : undefined;
 
       // Top border
       this.backBuffer.write(x, y, chars.topLeft + chars.horizontal.repeat(Math.max(0, width - 2)) + chars.topRight, borderStyle);
@@ -190,11 +218,14 @@ class Renderer {
       }
     }
 
+    // Resolve theme colors for background
+    const resolvedBg = this.resolveColor(style?.bg);
+
     // Draw background fill if configured
-    if (style?.bg) {
+    if (resolvedBg) {
       for (let row = insets.top; row < height - insets.bottom; row++) {
         for (let col = insets.left; col < width - insets.right; col++) {
-          this.backBuffer.write(x + col, y + row, " ", { bg: style.bg });
+          this.backBuffer.write(x + col, y + row, " ", { bg: resolvedBg });
         }
       }
     }
@@ -205,13 +236,24 @@ class Renderer {
     const context: RenderContext = {
       width: contentWidth,
       height: contentHeight,
-      focused: false,
+      focused: isFocused,
       hovered: component.hovered,
       terminalWidth: this.terminalWidth,
       terminalHeight: this.terminalHeight,
     };
     const output = component.render(context);
-    const baseStyle = style ? { fg: style.fg, bg: style.bg, bold: style.bold, dim: style.dim, underline: style.underline, italic: style.italic, strikethrough: style.strikethrough, inverse: style.inverse } : undefined;
+
+    // Resolve theme colors in base style
+    const baseStyle = style ? {
+      fg: this.resolveColor(style.fg),
+      bg: this.resolveColor(style.bg),
+      bold: style.bold,
+      dim: style.dim,
+      underline: style.underline,
+      italic: style.italic,
+      strikethrough: style.strikethrough,
+      inverse: style.inverse,
+    } : undefined;
 
     const renderLines = this.normalizeRenderOutput(output);
     const overflowMode = style?.overflow ?? "hidden";
@@ -233,8 +275,17 @@ class Renderer {
     // Track total lines for scrollable components
     component.setTotalLines(processedLines.length);
 
+    // Compute max line width for horizontal scroll tracking
+    let maxLineWidth = 0;
+    for (const line of processedLines) {
+      const w = segmentsWidth(line.segments);
+      if (w > maxLineWidth) maxLineWidth = w;
+    }
+    component.setTotalColumns(maxLineWidth);
+
     // Apply scroll offset
     const scrollOffset = component.scrollable ? component.scrollOffset : 0;
+    const scrollXOffset = component.scrollable ? component.scrollXOffset : 0;
     const visibleLines = processedLines.slice(scrollOffset);
 
     for (let i = 0; i < visibleLines.length; i++) {
@@ -252,16 +303,35 @@ class Renderer {
         alignOffset = Math.max(0, contentWidth - lineWidth);
       }
 
-      // Write each segment individually with merged styles
+      // Write each segment individually with merged styles, applying horizontal scroll
       let cursorX = x + insets.left + alignOffset;
+      let consumedWidth = 0;
       for (const seg of segments) {
-        const segStyle = seg.style ? { ...baseStyle, ...seg.style } : baseStyle;
-        this.backBuffer.write(cursorX, lineY, seg.text, segStyle);
-        cursorX += stringWidth(seg.text);
+        // Resolve theme colors in segment styles
+        const resolvedSegStyle = seg.style ? {
+          ...seg.style,
+          fg: this.resolveColor(seg.style.fg) ?? seg.style.fg,
+          bg: this.resolveColor(seg.style.bg) ?? seg.style.bg,
+        } : undefined;
+        const segStyle = resolvedSegStyle ? { ...baseStyle, ...resolvedSegStyle } : baseStyle;
+        const segW = stringWidth(seg.text);
+
+        if (scrollXOffset > 0 && consumedWidth + segW > scrollXOffset) {
+          // Partially visible segment
+          const skipChars = Math.max(0, scrollXOffset - consumedWidth);
+          const visibleText = seg.text.slice(skipChars);
+          this.backBuffer.write(cursorX, lineY, visibleText, segStyle);
+          cursorX += stringWidth(visibleText);
+        } else if (consumedWidth >= scrollXOffset) {
+          // Fully visible segment
+          this.backBuffer.write(cursorX, lineY, seg.text, segStyle);
+          cursorX += segW;
+        }
+        consumedWidth += segW;
       }
     }
 
-    // Draw scroll indicator if scrollable and content overflows
+    // Draw vertical scroll indicator if scrollable and content overflows
     if (component.scrollable && processedLines.length > contentHeight && contentHeight > 0) {
       this.drawScrollIndicator(
         x + width - 1 - (insets.right > 0 ? 1 : 0),
@@ -270,6 +340,17 @@ class Renderer {
         scrollOffset,
         processedLines.length,
         style?.dim ? { dim: true } : undefined
+      );
+    }
+
+    // Draw horizontal scroll indicator if scrollable and content wider than viewport
+    if (component.scrollable && maxLineWidth > contentWidth && contentWidth > 0) {
+      this.drawHorizontalScrollIndicator(
+        x + insets.left,
+        y + height - 1 - (insets.bottom > 0 ? 1 : 0),
+        contentWidth,
+        scrollXOffset,
+        maxLineWidth,
       );
     }
   }
@@ -294,6 +375,28 @@ class Renderer {
       const isThumb = i >= thumbPos && i < thumbPos + thumbSize;
       const char = isThumb ? "█" : "░";
       this.backBuffer.write(colX, startY + i, char, indicatorStyle);
+    }
+  }
+
+  private drawHorizontalScrollIndicator(
+    startX: number,
+    rowY: number,
+    trackWidth: number,
+    scrollXOffset: number,
+    totalColumns: number,
+  ): void {
+    if (trackWidth <= 0 || totalColumns <= 0) return;
+
+    const thumbSize = Math.max(1, Math.round((trackWidth / totalColumns) * trackWidth));
+    const maxOffset = totalColumns - trackWidth;
+    const thumbPos = maxOffset > 0
+      ? Math.round((scrollXOffset / maxOffset) * (trackWidth - thumbSize))
+      : 0;
+
+    for (let i = 0; i < trackWidth; i++) {
+      const isThumb = i >= thumbPos && i < thumbPos + thumbSize;
+      const char = isThumb ? "█" : "░";
+      this.backBuffer.write(startX + i, rowY, char);
     }
   }
 

@@ -17,3 +17,5 @@ export { Animator } from "./entities/animator.js";
 export type { AnimationId, AnimationConfig } from "./entities/animator.js";
 export { linear, easeIn, easeOut, easeInOut, bounce, elastic } from "./utils/easing.js";
 export type { EasingFn } from "./utils/easing.js";
+export { darkTheme, lightTheme, resolveThemeColor } from "./entities/theme.js";
+export type { Theme } from "./entities/theme.js";
