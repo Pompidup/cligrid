@@ -54,6 +54,15 @@ class FocusManager extends EventEmitter {
     this.emitFocus();
   }
 
+  focusOn(component: Component): void {
+    const idx = this.focusableComponents.indexOf(component);
+    if (idx === -1) return;
+    if (idx === this.focusIndex) return;
+    this.emitBlur();
+    this.focusIndex = idx;
+    this.emitFocus();
+  }
+
   handleKeyEvent(event: KeyEvent): void {
     if (event.key === "tab" && !event.shift) {
       this.focusNext();
@@ -77,11 +86,11 @@ class FocusManager extends EventEmitter {
           return;
         }
         if (event.key === "left") {
-          current.scrollByX(-1);
+          current.scrollByX(-5);
           return;
         }
         if (event.key === "right") {
-          current.scrollByX(1);
+          current.scrollByX(5);
           return;
         }
       }

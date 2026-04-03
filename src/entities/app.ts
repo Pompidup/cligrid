@@ -66,9 +66,19 @@ class App {
       this.focusManager.handleKeyEvent(event);
     });
 
-    // Sync focused component ID to renderer
+    // Sync focused component ID to renderer and trigger re-render
     this.focusManager.on("focusChanged", (comp: Component) => {
+      const previousId = this.renderer.focusedId;
       this.renderer.setFocusedId(comp.id);
+
+      // Re-render old and new focused components so focusStyle is visible
+      if (this.running) {
+        if (previousId && previousId !== comp.id) {
+          const prev = this.template.components.find((c) => c.id === previousId);
+          if (prev) this.renderer.partialRender(prev);
+        }
+        this.renderer.partialRender(comp);
+      }
     });
 
     this.inputManager.on("mouse", (event: MouseEvent) => {
@@ -188,6 +198,7 @@ class App {
     if (focusable) {
       this.previousFocus = this.focusManager.focused;
       this.focusManager.register(component);
+      this.focusManager.focusOn(component);
     }
 
     if (this.running) {
@@ -205,17 +216,7 @@ class App {
     if (this.previousFocus) {
       const prev = this.previousFocus;
       this.previousFocus = undefined;
-      // Re-register to restore focus (if it was already registered, register is a no-op)
-      if (this.focusManager.focused?.id !== prev.id) {
-        // Focus the previously focused component by cycling
-        const components = this.template.components;
-        const idx = components.findIndex((c) => c.id === prev.id);
-        if (idx !== -1) {
-          // The component is still in the focusable list, we just need to refocus
-          // Since FocusManager doesn't have a direct focusOn method, emit focus
-          prev.emit("focus");
-        }
-      }
+      this.focusManager.focusOn(prev);
     }
 
     if (this.running) {

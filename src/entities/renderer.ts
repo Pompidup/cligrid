@@ -94,6 +94,10 @@ class Renderer {
     return this._theme;
   }
 
+  get focusedId(): string | null {
+    return this._focusedId;
+  }
+
   setFocusedId(id: string | null): void {
     this._focusedId = id;
   }

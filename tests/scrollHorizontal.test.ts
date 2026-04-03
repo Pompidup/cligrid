@@ -159,20 +159,20 @@ describe("Horizontal Scroll", () => {
         props: { text: "Hello" },
       });
       comp.setAbsolutePosition({ x: 0, y: 0, width: 10, height: 3 });
-      comp.setTotalColumns(30);
+      comp.setTotalColumns(100);
 
       fm.register(comp);
 
       const rightEvent = { key: "right", ctrl: false, shift: false, meta: false, raw: Buffer.from("") };
       fm.handleKeyEvent(rightEvent);
-      expect(comp.scrollXOffset).toBe(1);
+      expect(comp.scrollXOffset).toBe(5);
 
       fm.handleKeyEvent(rightEvent);
-      expect(comp.scrollXOffset).toBe(2);
+      expect(comp.scrollXOffset).toBe(10);
 
       const leftEvent = { key: "left", ctrl: false, shift: false, meta: false, raw: Buffer.from("") };
       fm.handleKeyEvent(leftEvent);
-      expect(comp.scrollXOffset).toBe(1);
+      expect(comp.scrollXOffset).toBe(5);
 
       fm.destroy();
     });
